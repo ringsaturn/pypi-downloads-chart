@@ -5,7 +5,7 @@
 
 import os
 import tomllib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -194,7 +194,7 @@ def generate_project_index(output_dir="output", pages_dir="output"):
     </div>
 
     <div class="update-time">
-        <strong>Last Updated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
+        <strong>Last Updated:</strong> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}
     </div>
 '''
 
