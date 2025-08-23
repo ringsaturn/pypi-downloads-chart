@@ -73,60 +73,18 @@ jobs:
       run: |
         echo "📁 Generated files:"
         find output -type f -name "*.svg" -o -name "*.html" | head -20
-        
-    - name: Commit generated files to repository
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add output/
-        if ! git diff --cached --quiet; then
-          git commit -m "📊 Update PyPI charts - $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          git push
-          echo "✅ Files committed to repository"
-        else
-          echo "ℹ️ No changes to commit"
-        fi
-        
-    - name: Setup Pages
-      uses: actions/configure-pages@v4
-      
-    - name: Prepare deployment files
-      run: |
-        echo "📦 Preparing files for GitHub Pages deployment..."
-        mkdir -p _site
-        
-        # 复制 output 目录的所有内容到 _site
-        if [ -d "output" ]; then
-          cp -r output/* _site/
-          echo "✅ Copied output files to _site/"
-        else
-          echo "❌ Output directory not found"
-          exit 1
-        fi
-        
-        # 创建 .nojekyll 文件以允许以下划线开头的文件
-        touch _site/.nojekyll
-        
-        # 显示最终的文件结构
-        echo "📁 Final _site structure:"
-        find _site -type f | head -20
-        
+
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
+      if: ${{ github.ref_name == 'main' }}
       with:
-        path: '_site'
+        path: "./output"
         
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
-      
-    - name: Upload generated files as artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: pypi-charts-${{ github.run_number }}
-        path: output/
-        retention-days: 30
-        
+      if: ${{ github.ref_name == 'main' }}
+
     - name: Summary
       run: |
         echo "🎉 Deployment completed successfully!"
