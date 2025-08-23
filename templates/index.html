@@ -62,12 +62,61 @@
             margin: 20px 0;
         }
         
-        .version-controls {
+        .version-controls, .time-range-controls {
             margin: 20px 0;
             padding: 20px;
             background: #f8f9fa;
             border-radius: 8px;
             border: 1px solid #e9ecef;
+        }
+        
+        .time-range-inputs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: end;
+            margin-bottom: 15px;
+        }
+        
+        .date-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .date-input-group label {
+            font-weight: 500;
+            color: #495057;
+            font-size: 0.9em;
+        }
+        
+        .date-input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.9em;
+            background: white;
+            min-width: 150px;
+        }
+        
+        .date-input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+        
+        .time-range-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: end;
+        }
+        
+        .preset-ranges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
         }
         
         .version-controls h4 {
@@ -253,6 +302,32 @@
         <div class="chart-title">📈 Download Trends</div>
         <div id="trendsLoading" class="loading">Loading download trends data...</div>
         <div id="trendsError" class="error" style="display: none;"></div>
+        
+        <!-- Time Range Controls -->
+        <div id="timeRangeControls" class="time-range-controls" style="display: none;">
+            <h4>🕐 Time Range Selection:</h4>
+            <div class="time-range-inputs">
+                <div class="date-input-group">
+                    <label for="startDate">From:</label>
+                    <input type="date" id="startDate" class="date-input">
+                </div>
+                <div class="date-input-group">
+                    <label for="endDate">To:</label>
+                    <input type="date" id="endDate" class="date-input">
+                </div>
+                <div class="time-range-buttons">
+                    <button class="btn btn-primary" onclick="updateTimeRange()">Apply Range</button>
+                    <button class="btn btn-secondary" onclick="resetTimeRange()">Reset to Full Range</button>
+                </div>
+            </div>
+            <div class="preset-ranges">
+                <button class="btn btn-outline" onclick="setPresetRange('1month')">Last 30 Days</button>
+                <button class="btn btn-outline" onclick="setPresetRange('3months')">Last 3 Months</button>
+                <button class="btn btn-outline" onclick="setPresetRange('6months')">Last 6 Months</button>
+                <button class="btn btn-outline" onclick="setPresetRange('1year')">Last Year</button>
+            </div>
+        </div>
+        
         <div class="chart-container">
             <canvas id="trendsChart" style="display: none;"></canvas>
         </div>

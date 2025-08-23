@@ -3,6 +3,8 @@ let trendsChart = null;
 let versionChart = null;
 let versionData = [];
 let availableVersions = [];
+let allTrendsData = []; // Store original data for time range filtering
+let originalTimeRange = null; // Store original time range
 
 // Chart.js default configuration
 Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif';
@@ -139,7 +141,7 @@ async function initTrendsChart() {
         const data = await tryLoadRecentCsv('trends');
         
         // Parse and prepare data
-        const chartData = data
+        allTrendsData = data
             .filter(row => row.download_date && row.daily_downloads) // Filter valid data
             .map(row => {
                 const date = parseDate(row.download_date);
@@ -156,8 +158,22 @@ async function initTrendsChart() {
             .filter(point => point !== null) // Remove null entries
             .sort((a, b) => a.x - b.x);
         
+        // Store original time range
+        if (allTrendsData.length > 0) {
+            originalTimeRange = {
+                min: Math.min(...allTrendsData.map(d => d.x)),
+                max: Math.max(...allTrendsData.map(d => d.x))
+            };
+            
+            // Initialize time range controls
+            initTimeRangeControls();
+        }
+        
+        const chartData = allTrendsData;
+        
         loadingEl.style.display = 'none';
         chartEl.style.display = 'block';
+        document.getElementById('timeRangeControls').style.display = 'block';
         
         const ctx = chartEl.getContext('2d');
         trendsChart = new Chart(ctx, {
@@ -562,6 +578,128 @@ function updateVersionChart() {
     }
     
     versionChart.update();
+}
+
+// Time range control functions
+function initTimeRangeControls() {
+    if (!originalTimeRange) return;
+    
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    
+    // Set initial values to full range
+    startDate.value = new Date(originalTimeRange.min).toISOString().split('T')[0];
+    endDate.value = new Date(originalTimeRange.max).toISOString().split('T')[0];
+    
+    // Set min/max attributes
+    const minDateStr = new Date(originalTimeRange.min).toISOString().split('T')[0];
+    const maxDateStr = new Date(originalTimeRange.max).toISOString().split('T')[0];
+    
+    startDate.min = minDateStr;
+    startDate.max = maxDateStr;
+    endDate.min = minDateStr;
+    endDate.max = maxDateStr;
+}
+
+function updateTimeRange() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+    }
+    
+    const startTime = new Date(startDate).getTime();
+    const endTime = new Date(endDate + 'T23:59:59').getTime(); // Include the full end day
+    
+    if (startTime >= endTime) {
+        alert('Start date must be before end date');
+        return;
+    }
+    
+    // Filter data for the selected range
+    const filteredData = allTrendsData.filter(point => 
+        point.x >= startTime && point.x <= endTime
+    );
+    
+    if (filteredData.length === 0) {
+        alert('No data available for the selected time range');
+        return;
+    }
+    
+    // Update chart
+    updateTrendsChart(filteredData);
+}
+
+function resetTimeRange() {
+    if (!originalTimeRange) return;
+    
+    // Reset input values
+    document.getElementById('startDate').value = new Date(originalTimeRange.min).toISOString().split('T')[0];
+    document.getElementById('endDate').value = new Date(originalTimeRange.max).toISOString().split('T')[0];
+    
+    // Update chart with full data
+    updateTrendsChart(allTrendsData);
+}
+
+function setPresetRange(preset) {
+    if (!originalTimeRange) return;
+    
+    const endTime = originalTimeRange.max;
+    let startTime;
+    
+    const now = new Date(endTime);
+    
+    switch(preset) {
+        case '1month':
+            startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).getTime();
+            break;
+        case '3months':
+            startTime = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).getTime();
+            break;
+        case '6months':
+            startTime = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000).getTime();
+            break;
+        case '1year':
+            startTime = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).getTime();
+            break;
+        default:
+            return;
+    }
+    
+    // Ensure start time doesn't go before data start
+    startTime = Math.max(startTime, originalTimeRange.min);
+    
+    // Update input values
+    document.getElementById('startDate').value = new Date(startTime).toISOString().split('T')[0];
+    document.getElementById('endDate').value = new Date(endTime).toISOString().split('T')[0];
+    
+    // Apply the range
+    updateTimeRange();
+}
+
+function updateTrendsChart(chartData) {
+    if (!trendsChart || !chartData.length) return;
+    
+    // Update chart data
+    trendsChart.data.datasets[0].data = chartData;
+    
+    // Update axis range
+    const minTime = Math.min(...chartData.map(d => d.x));
+    const maxTime = Math.max(...chartData.map(d => d.x));
+    
+    trendsChart.options.scales.x.min = minTime;
+    trendsChart.options.scales.x.max = maxTime;
+    
+    // Update the callback to use current data range
+    const dataRange = { min: minTime, max: maxTime };
+    trendsChart.options.scales.x.ticks.callback = function(value, index, values) {
+        const date = new Date(value);
+        return formatDate(date, dataRange);
+    };
+    
+    trendsChart.update();
 }
 
 // Initialize charts when page loads
