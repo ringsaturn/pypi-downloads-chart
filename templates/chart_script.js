@@ -14,8 +14,30 @@ function parseDate(dateString) {
     return new Date(dateString);
 }
 
-function formatDate(date) {
+function formatDate(date, dataRange = null) {
+    // If we know the data range, format accordingly
+    if (dataRange) {
+        const rangeDays = (dataRange.max - dataRange.min) / (1000 * 60 * 60 * 24);
+        
+        // For data spanning more than 6 months, show month/year for clarity
+        if (rangeDays > 180) {
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric',
+                month: 'short'
+            });
+        }
+        // For shorter ranges, show month/day
+        else if (rangeDays > 30) {
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+    }
+    
+    // Default format with year
     return date.toLocaleDateString('en-US', { 
+        year: 'numeric',
         month: 'short', 
         day: 'numeric' 
     });
@@ -35,11 +57,20 @@ async function loadCsvData(filename) {
         const data = [];
         
         for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',');
+            const line = lines[i].trim();
+            if (!line) continue; // Skip empty lines
+            
+            const values = line.split(',');
+            if (values.length !== headers.length) continue; // Skip malformed lines
+            
             const row = {};
             headers.forEach((header, index) => {
                 row[header.trim()] = values[index]?.trim();
             });
+            
+            // Skip rows with empty or invalid data
+            if (!row.download_date || !row.daily_downloads) continue;
+            
             data.push(row);
         }
         
@@ -108,10 +139,22 @@ async function initTrendsChart() {
         const data = await tryLoadRecentCsv('trends');
         
         // Parse and prepare data
-        const chartData = data.map(row => ({
-            x: parseDate(row.download_date).getTime(),
-            y: parseInt(row.daily_downloads)
-        })).sort((a, b) => a.x - b.x);
+        const chartData = data
+            .filter(row => row.download_date && row.daily_downloads) // Filter valid data
+            .map(row => {
+                const date = parseDate(row.download_date);
+                const downloads = parseInt(row.daily_downloads);
+                
+                // Skip invalid dates or downloads
+                if (isNaN(date.getTime()) || isNaN(downloads)) return null;
+                
+                return {
+                    x: date.getTime(),
+                    y: downloads
+                };
+            })
+            .filter(point => point !== null) // Remove null entries
+            .sort((a, b) => a.x - b.x);
         
         loadingEl.style.display = 'none';
         chartEl.style.display = 'block';
@@ -152,13 +195,19 @@ async function initTrendsChart() {
                             display: true,
                             text: 'Date'
                         },
+                        min: Math.min(...chartData.map(d => d.x)),
+                        max: Math.max(...chartData.map(d => d.x)),
                         ticks: {
                             callback: function(value, index, values) {
                                 // Convert back to date for display
                                 const date = new Date(value);
-                                return formatDate(date);
+                                const dataRange = {
+                                    min: Math.min(...chartData.map(d => d.x)),
+                                    max: Math.max(...chartData.map(d => d.x))
+                                };
+                                return formatDate(date, dataRange);
                             },
-                            maxTicksLimit: 10
+                            maxTicksLimit: 12
                         }
                     },
                     y: {
@@ -329,7 +378,7 @@ function initEmptyVersionChart() {
                             const date = new Date(value);
                             return formatDate(date);
                         },
-                        maxTicksLimit: 10
+                        maxTicksLimit: 12
                     }
                 },
                 y: {
@@ -462,10 +511,22 @@ function updateVersionChart() {
     
     const datasets = selectedVersions.map((version, index) => {
         const versionRows = versionData.filter(row => row.version === version);
-        const chartData = versionRows.map(row => ({
-            x: parseDate(row.download_date).getTime(),
-            y: parseInt(row.daily_downloads)
-        })).sort((a, b) => a.x - b.x);
+        const chartData = versionRows
+            .filter(row => row.download_date && row.daily_downloads) // Filter valid data
+            .map(row => {
+                const date = parseDate(row.download_date);
+                const downloads = parseInt(row.daily_downloads);
+                
+                // Skip invalid dates or downloads
+                if (isNaN(date.getTime()) || isNaN(downloads)) return null;
+                
+                return {
+                    x: date.getTime(),
+                    y: downloads
+                };
+            })
+            .filter(point => point !== null) // Remove null entries
+            .sort((a, b) => a.x - b.x);
         
         return {
             label: `v${version}`,
@@ -487,6 +548,19 @@ function updateVersionChart() {
     });
     
     versionChart.data.datasets = datasets;
+    
+    // Auto-adapt time range based on actual data
+    if (datasets.length > 0) {
+        const allDataPoints = datasets.flatMap(dataset => dataset.data);
+        if (allDataPoints.length > 0) {
+            const minTime = Math.min(...allDataPoints.map(d => d.x));
+            const maxTime = Math.max(...allDataPoints.map(d => d.x));
+            
+            versionChart.options.scales.x.min = minTime;
+            versionChart.options.scales.x.max = maxTime;
+        }
+    }
+    
     versionChart.update();
 }
 
