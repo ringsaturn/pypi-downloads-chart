@@ -4,8 +4,6 @@ import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import pandas as pd
 from google.cloud import bigquery
 
@@ -96,6 +94,176 @@ def save_results_to_csv(rows, schema, job_name: str, project_name: str = None, o
     return filepath
 
 
+def generate_svg_chart(df, chart_type: str, project_name: str, job_name: str) -> str:
+    """Generate SVG chart directly without matplotlib"""
+    # Chart dimensions
+    width = 800
+    height = 400
+    margin = 60
+    
+    # Colors matching the website theme
+    colors = {
+        'primary': '#007bff',
+        'secondary': '#6c757d', 
+        'success': '#28a745',
+        'warning': '#ffc107',
+        'danger': '#dc3545',
+        'info': '#17a2b8',
+        'light': '#f8f9fa',
+        'dark': '#343a40',
+        'white': '#ffffff',
+        'border': '#e9ecef',
+        'text': '#495057',
+        'text_light': '#6c757d',
+        'background': '#ffffff'
+    }
+    
+    # Version colors for multi-line charts
+    version_colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997']
+    
+    # Sort data by date
+    df_sorted = df.sort_values('download_date')
+    
+    # Calculate data ranges
+    dates = df_sorted['download_date'].tolist()
+    downloads = df_sorted['daily_downloads'].tolist()
+    
+    # Convert dates to numeric values for plotting
+    date_nums = [(d - dates[0]).days for d in dates]
+    
+    # Calculate chart area
+    chart_width = width - 2 * margin
+    chart_height = height - 2 * margin
+    
+    # Calculate scales
+    x_min, x_max = min(date_nums), max(date_nums)
+    y_min, y_max = 0, max(downloads) * 1.1
+    
+    def scale_x(x):
+        return margin + (x - x_min) / (x_max - x_min) * chart_width
+    
+    def scale_y(y):
+        return height - margin - (y - y_min) / (y_max - y_min) * chart_height
+    
+    # Start building SVG
+    svg_parts = []
+    
+    # SVG header
+    svg_parts.append(f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" style="background-color: {colors['background']}; border: 1px solid {colors['border']}; border-radius: 8px;">
+    <defs>
+        <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:{colors['primary']};stop-opacity:0.3" />
+            <stop offset="100%" style="stop-color:{colors['primary']};stop-opacity:0.1" />
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.1"/>
+        </filter>
+    </defs>''')
+    
+    # Grid lines
+    svg_parts.append('    <!-- Grid lines -->')
+    # Horizontal grid lines
+    for i in range(5):
+        y_val = y_min + (y_max - y_min) * i / 4
+        y_pos = scale_y(y_val)
+        svg_parts.append(f'    <line x1="{margin}" y1="{y_pos}" x2="{width-margin}" y2="{y_pos}" stroke="{colors["border"]}" stroke-width="1" opacity="0.5"/>')
+    
+    # Vertical grid lines (fewer for readability)
+    for i in range(6):
+        x_val = x_min + (x_max - x_min) * i / 5
+        x_pos = scale_x(x_val)
+        svg_parts.append(f'    <line x1="{x_pos}" y1="{margin}" x2="{x_pos}" y2="{height-margin}" stroke="{colors["border"]}" stroke-width="1" opacity="0.5"/>')
+    
+    # Chart area
+    if chart_type == 'simple':
+        # Create area fill path
+        area_path = f"M {scale_x(date_nums[0])} {scale_y(downloads[0])}"
+        for i in range(1, len(date_nums)):
+            area_path += f" L {scale_x(date_nums[i])} {scale_y(downloads[i])}"
+        area_path += f" L {scale_x(date_nums[-1])} {scale_y(0)} L {scale_x(date_nums[0])} {scale_y(0)} Z"
+        
+        svg_parts.append(f'    <path d="{area_path}" fill="url(#areaGradient)" opacity="0.6"/>')
+        
+        # Line path
+        line_path = f"M {scale_x(date_nums[0])} {scale_y(downloads[0])}"
+        for i in range(1, len(date_nums)):
+            line_path += f" L {scale_x(date_nums[i])} {scale_y(downloads[i])}"
+        
+        svg_parts.append(f'    <path d="{line_path}" stroke="{colors["primary"]}" stroke-width="3" fill="none" filter="url(#shadow)"/>')
+        
+        # Data points
+        for i, (x, y) in enumerate(zip(date_nums, downloads)):
+            svg_parts.append(f'    <circle cx="{scale_x(x)}" cy="{scale_y(y)}" r="4" fill="{colors["primary"]}" stroke="{colors["white"]}" stroke-width="2"/>')
+    
+    elif chart_type == 'version':
+        # Multi-version chart
+        versions = df['version'].unique()
+        
+        for v_idx, version in enumerate(sorted(versions)):
+            version_data = df[df['version'] == version].sort_values('download_date')
+            version_dates = [(d - dates[0]).days for d in version_data['download_date']]
+            version_downloads = version_data['daily_downloads'].tolist()
+            
+            color = version_colors[v_idx % len(version_colors)]
+            
+            # Line path for this version
+            if len(version_dates) > 1:
+                line_path = f"M {scale_x(version_dates[0])} {scale_y(version_downloads[0])}"
+                for i in range(1, len(version_dates)):
+                    line_path += f" L {scale_x(version_dates[i])} {scale_y(version_downloads[i])}"
+                
+                svg_parts.append(f'    <path d="{line_path}" stroke="{color}" stroke-width="2" fill="none" filter="url(#shadow)"/>')
+            
+            # Data points for this version
+            for x, y in zip(version_dates, version_downloads):
+                svg_parts.append(f'    <circle cx="{scale_x(x)}" cy="{scale_y(y)}" r="3" fill="{color}" stroke="{colors["white"]}" stroke-width="1.5"/>')
+    
+    # Axis labels
+    svg_parts.append('    <!-- Axis labels -->')
+    
+    # Y-axis labels
+    for i in range(5):
+        y_val = y_min + (y_max - y_min) * i / 4
+        y_pos = scale_y(y_val)
+        label = format_number(int(y_val))
+        svg_parts.append(f'    <text x="{margin-10}" y="{y_pos+4}" text-anchor="end" font-family="system-ui, sans-serif" font-size="12" fill="{colors["text_light"]}">{label}</text>')
+    
+    # X-axis labels (date labels)
+    for i in range(6):
+        x_val = x_min + (x_max - x_min) * i / 5
+        x_pos = scale_x(x_val)
+        if i < len(dates):
+            date_label = dates[int(x_val)] if int(x_val) < len(dates) else dates[-1]
+            label = date_label.strftime('%m-%d')
+            svg_parts.append(f'    <text x="{x_pos}" y="{height-margin+20}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="{colors["text_light"]}">{label}</text>')
+    
+    # Title
+    title = f"{project_name} - Daily Downloads"
+    if chart_type == 'version':
+        title += " by Version"
+    
+    svg_parts.append(f'    <text x="{width//2}" y="30" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="600" fill="{colors["text"]}">{title}</text>')
+    
+    # Axis titles
+    svg_parts.append(f'    <text x="{width//2}" y="{height-15}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="{colors["text_light"]}">Date</text>')
+    svg_parts.append(f'    <text x="15" y="{height//2}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="{colors["text_light"]}" transform="rotate(-90, 15, {height//2})">Daily Downloads</text>')
+    
+    # Legend for version chart
+    if chart_type == 'version':
+        legend_y = 60
+        for v_idx, version in enumerate(sorted(versions)):
+            color = version_colors[v_idx % len(version_colors)]
+            legend_x = width - 150
+            legend_y_pos = legend_y + v_idx * 20
+            
+            svg_parts.append(f'    <circle cx="{legend_x}" cy="{legend_y_pos}" r="6" fill="{color}"/>')
+            svg_parts.append(f'    <text x="{legend_x+15}" y="{legend_y_pos+4}" font-family="system-ui, sans-serif" font-size="12" fill="{colors["text"]}">v{version}</text>')
+    
+    svg_parts.append('</svg>')
+    
+    return '\n'.join(svg_parts)
+
+
 def create_svg_chart(rows, schema, job_name: str, project_name: str, output_dir: str = "output") -> str:
     """Create SVG chart from BigQuery results"""
     # Create project-specific directory
@@ -135,76 +303,21 @@ def create_svg_chart(rows, schema, job_name: str, project_name: str, output_dir:
     
     df = pd.DataFrame(data)
     
-    # Set up matplotlib for SVG output
-    plt.style.use('default')
-    fig, ax = plt.subplots(figsize=(12, 6), dpi=100)
+    # Determine chart type
+    chart_type = 'version' if 'version' in df.columns else 'simple'
     
-    # Configure matplotlib to use Agg backend for SVG
-    plt.switch_backend('Agg')
+    # Generate SVG content
+    svg_content = generate_svg_chart(df, chart_type, project_name, job_name)
     
-    # Check what type of chart to create based on available columns
-    if 'version' in df.columns:
-        # Multi-version chart
-        create_version_chart(df, ax, job_name, project_name)
-    else:
-        # Simple download chart
-        create_simple_chart(df, ax, job_name, project_name)
-    
-    # Save as SVG
-    plt.tight_layout()
-    plt.savefig(filepath, format='svg', bbox_inches='tight', 
-                facecolor='white', edgecolor='none')
-    plt.close(fig)
+    # Save SVG to file
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(svg_content)
     
     print(f"SVG chart saved to: {filepath}")
     return filepath
 
 
-def create_version_chart(df, ax, job_name: str, project_name: str):
-    """Create chart for version-specific data"""
-    # Group by version and plot separate lines
-    versions = df['version'].unique()
-    colors = plt.cm.Set1(range(len(versions)))
-    
-    for i, version in enumerate(sorted(versions)):
-        version_data = df[df['version'] == version].copy()
-        version_data = version_data.sort_values('download_date')
-        
-        ax.plot(version_data['download_date'], version_data['daily_downloads'], 
-                marker='o', linewidth=2, markersize=4, 
-                label=f'v{version}', color=colors[i])
-    
-    ax.set_title(f'{project_name} - Daily Downloads by Version', fontsize=14, fontweight='bold')
-    ax.set_xlabel('Date', fontsize=12)
-    ax.set_ylabel('Daily Downloads', fontsize=12)
-    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    ax.grid(True, alpha=0.3)
-    
-    # Format x-axis dates
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(df['download_date'].unique()) // 10)))
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
-
-
-
-def create_simple_chart(df, ax, job_name: str, project_name: str):
-    """Create simple download chart"""
-    df_sorted = df.sort_values('download_date')
-    
-    ax.plot(df_sorted['download_date'], df_sorted['daily_downloads'], 
-            marker='o', linewidth=2, markersize=4, color='blue')
-    ax.fill_between(df_sorted['download_date'], df_sorted['daily_downloads'], 
-                    alpha=0.3, color='lightblue')
-    
-    ax.set_title(f'{project_name} - Daily Downloads', fontsize=14, fontweight='bold')
-    ax.set_xlabel('Date', fontsize=12)
-    ax.set_ylabel('Daily Downloads', fontsize=12)
-    ax.grid(True, alpha=0.3)
-    
-    # Format x-axis dates
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(df['download_date'].unique()) // 10)))
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+# Removed matplotlib-based chart functions - replaced with generate_svg_chart function above
 
 
 def format_number(num):
