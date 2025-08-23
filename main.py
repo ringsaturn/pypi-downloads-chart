@@ -1,7 +1,7 @@
 import csv
 import os
 import tomllib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -45,7 +45,7 @@ def save_results_to_csv(rows, schema, job_name: str, project_name: str = None, o
     os.makedirs(project_output_dir, exist_ok=True)
     
     # Generate filename with timestamp for historical records
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     filename = f"{job_name}_{timestamp}.csv"
     filepath = os.path.join(project_output_dir, filename)
     
@@ -241,7 +241,7 @@ def generate_project_html(project_name: str, output_dir: str = "output", templat
     
     # Replace template variables
     html_content = template_content.replace('{{PROJECT_NAME}}', project_name)
-    html_content = html_content.replace('{{LAST_UPDATE}}', datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'))
+    html_content = html_content.replace('{{LAST_UPDATE}}', datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC'))
     
     # Generate CSV files list for JavaScript
     csv_files_script = f"""
