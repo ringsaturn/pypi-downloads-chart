@@ -1,0 +1,15 @@
+---
+alwaysApply: false
+---
+
+run python codes via uv:
+
+```bash
+uv run xxx.py
+```
+
+or
+
+```bash
+uv run python -c 'print("Hello, World!")'
+```

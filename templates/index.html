@@ -767,6 +767,9 @@
         </div>
     </div>
     
+    <!-- SVG Charts Section -->
+    {{SVG_SECTIONS}}
+    
     <!-- Installer Statistics Chart -->
     <div class="chart-section">
         <div class="chart-title">🔧 Installer Statistics (Recent 30 Days)</div>
@@ -831,6 +834,16 @@
                 <textarea id="installerMdText" class="markdown-textarea" readonly>[![Installer Stats](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/installer-stats-pie.svg)](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/index.html)</textarea>
                 <button class="btn btn-primary copy-btn" onclick="copyToClipboard('installerMdText', this)">
                     📋 Copy Installer Stats
+                </button>
+            </div>
+        </div>
+        
+        <div class="markdown-copy-section">
+            <h4>🌍 Country Statistics Chart</h4>
+            <div class="markdown-copy-item">
+                <textarea id="countryMdText" class="markdown-textarea" readonly>[![Country Stats](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/country-stats-pie.svg)](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/index.html)</textarea>
+                <button class="btn btn-primary copy-btn" onclick="copyToClipboard('countryMdText', this)">
+                    📋 Copy Country Stats
                 </button>
             </div>
         </div>

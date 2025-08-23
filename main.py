@@ -393,7 +393,8 @@ def create_svg_chart(rows, schema, job_name: str, project_name: str, output_dir:
         "download_by_date": "download-trends",
         "download_by_date_all_versions": "version-comparison", 
         "download_by_date_version": "version-specific",
-        "installer_stats_30d": "installer-stats-pie"
+        "installer_stats_30d": "installer-stats-pie",
+        "download_by_country_30d": "country-stats-pie"
     }
     
     # Get chart name from mapping or use job name
@@ -471,6 +472,158 @@ def create_installer_pie_chart(rows, schema, project_name: str, output_dir: str 
         f.write(svg_content)
     
     print(f"Installer pie chart saved to: {filepath}")
+    return filepath
+
+
+def generate_country_pie_chart_svg(df, project_name: str) -> str:
+    """Generate SVG pie chart for country statistics"""
+    # Chart dimensions
+    width = 800
+    height = 500
+    margin = 60
+    
+    # Colors for pie chart segments
+    colors = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+        '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+        '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
+    ]
+    
+    # Calculate total downloads
+    total_downloads = df['download_count'].sum()
+    
+    # Calculate pie chart parameters
+    center_x = width // 2
+    center_y = height // 2
+    radius = min(width, height) // 3 - margin
+    
+    # Start building SVG
+    svg_parts = []
+    
+    # SVG header
+    svg_parts.append(f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" style="background-color: white; border: 1px solid #e9ecef; border-radius: 8px;">
+    <defs>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.1"/>
+        </filter>
+    </defs>''')
+    
+    # Title
+    svg_parts.append(f'    <text x="{width//2}" y="30" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="#2c3e50">Recent 30 Days Download by Country - {project_name}</text>')
+    
+    # Calculate pie segments
+    current_angle = 0
+    for i, (_, row) in enumerate(df.iterrows()):
+        country_code = row['country_code']
+        download_count = row['download_count']
+        percentage = row['percentage']
+        
+        # Calculate segment angle
+        segment_angle = (download_count / total_downloads) * 360
+        
+        # Skip very small segments (less than 1%)
+        if segment_angle < 3.6:  # 1% of 360 degrees
+            continue
+        
+        # Calculate arc parameters
+        start_angle_rad = math.radians(current_angle)
+        end_angle_rad = math.radians(current_angle + segment_angle)
+        
+        # Calculate arc path
+        x1 = center_x + radius * math.cos(start_angle_rad)
+        y1 = center_y + radius * math.sin(start_angle_rad)
+        x2 = center_x + radius * math.cos(end_angle_rad)
+        y2 = center_y + radius * math.sin(end_angle_rad)
+        
+        # Determine if arc is large (more than 180 degrees)
+        large_arc_flag = 1 if segment_angle > 180 else 0
+        
+        # Create arc path
+        arc_path = f"M {center_x} {center_y} L {x1} {y1} A {radius} {radius} 0 {large_arc_flag} 1 {x2} {y2} Z"
+        
+        # Add pie segment
+        color = colors[i % len(colors)]
+        svg_parts.append(f'    <path d="{arc_path}" fill="{color}" filter="url(#shadow)"/>')
+        
+        # Add label if segment is large enough
+        if segment_angle > 15:  # Only label segments larger than 15 degrees
+            label_angle_rad = math.radians(current_angle + segment_angle / 2)
+            label_radius = radius * 0.7
+            label_x = center_x + label_radius * math.cos(label_angle_rad)
+            label_y = center_y + label_radius * math.sin(label_angle_rad)
+            
+            # Add percentage text
+            svg_parts.append(f'    <text x="{label_x}" y="{label_y}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="white">{percentage}%</text>')
+        
+        current_angle += segment_angle
+    
+    # Add legend
+    legend_x = margin
+    legend_y = height - margin - 20
+    legend_item_height = 25
+    
+    svg_parts.append(f'    <text x="{legend_x}" y="{legend_y - 10}" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Countries:</text>')
+    
+    for i, (_, row) in enumerate(df.iterrows()):
+        if i >= 10:  # Limit legend to first 10 items
+            break
+            
+        country_code = row['country_code']
+        download_count = row['download_count']
+        percentage = row['percentage']
+        
+        color = colors[i % len(colors)]
+        y_pos = legend_y + i * legend_item_height
+        
+        # Legend item
+        svg_parts.append(f'    <rect x="{legend_x}" y="{y_pos - 8}" width="12" height="12" fill="{color}"/>')
+        svg_parts.append(f'    <text x="{legend_x + 20}" y="{y_pos}" font-family="system-ui, sans-serif" font-size="11" fill="#2c3e50">{country_code} ({percentage}% - {download_count:,})</text>')
+    
+    # Add total downloads info
+    total_text = f"Total Downloads: {total_downloads:,}"
+    svg_parts.append(f'    <text x="{width//2}" y="{height - 20}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">{total_text}</text>')
+    
+    svg_parts.append('</svg>')
+    
+    return '\n'.join(svg_parts)
+
+
+def create_country_pie_chart(rows, schema, project_name: str, output_dir: str = "output") -> str:
+    """Create pie chart for country statistics"""
+    # Create project-specific directory
+    project_output_dir = os.path.join(output_dir, project_name)
+    os.makedirs(project_output_dir, exist_ok=True)
+    
+    # Create filename
+    filename = "country-stats-pie.svg"
+    filepath = os.path.join(project_output_dir, filename)
+    
+    if not rows:
+        print(f"No country data to create pie chart for project: {project_name}")
+        return filepath
+    
+    # Get field names from schema
+    field_names = [field.name for field in schema]
+    
+    # Convert to pandas DataFrame for easier plotting
+    data = []
+    for row in rows:
+        row_data = {}
+        for field_name in field_names:
+            value = getattr(row, field_name)
+            row_data[field_name] = value
+        data.append(row_data)
+    
+    df = pd.DataFrame(data)
+    
+    # Generate SVG pie chart
+    svg_content = generate_country_pie_chart_svg(df, project_name)
+    
+    # Save SVG to file
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(svg_content)
+    
+    print(f"Country pie chart saved to: {filepath}")
     return filepath
 
 
@@ -596,7 +749,7 @@ def save_recent_30_days_badge(rows, schema, project_name: str, output_dir: str =
 
 
 def generate_project_html(project_name: str, output_dir: str = "output", template_path: str = "templates/index.html") -> str:
-    """Generate HTML page for a project using new CSV-based template"""
+    """Generate HTML page for a project with both CSV and SVG charts"""
     project_output_dir = os.path.join(output_dir, project_name)
     
     # Check if project directory exists
@@ -606,12 +759,13 @@ def generate_project_html(project_name: str, output_dir: str = "output", templat
     
     # Find CSV files in project directory
     csv_files = []
+    svg_files = []
     if os.path.exists(project_output_dir):
         for file in os.listdir(project_output_dir):
             if file.endswith('.csv'):
                 csv_files.append(file)
-    
-
+            elif file.endswith('.svg'):
+                svg_files.append(file)
     
     # Read template
     template_content = ""
@@ -646,8 +800,12 @@ def generate_project_html(project_name: str, output_dir: str = "output", templat
         {js_content}
     </script>"""
     
+    # Generate SVG chart sections
+    svg_sections = generate_chart_sections(svg_files, project_name)
+    
     html_content = html_content.replace('{{CSV_FILES_SCRIPT}}', csv_files_script)
     html_content = html_content.replace('{{JAVASCRIPT_CODE}}', javascript_code)
+    html_content = html_content.replace('{{SVG_SECTIONS}}', svg_sections)
     
     # Save HTML file
     html_filepath = os.path.join(project_output_dir, 'index.html')
@@ -697,6 +855,18 @@ def create_default_csv_template() -> str:
             height: 400px;
             margin: 20px 0;
         }
+        .svg-chart {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .chart-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
     </style>
 </head>
 <body>
@@ -704,6 +874,11 @@ def create_default_csv_template() -> str:
         <h1>📦 {{PROJECT_NAME}}</h1>
         <p>PyPI Download Statistics</p>
     </div>
+    
+    <!-- SVG Charts Section -->
+    {{SVG_SECTIONS}}
+    
+    <!-- CSV-based Charts Section -->
     <div class="chart-section">
         <div class="chart-container">
             <canvas id="trendsChart"></canvas>
@@ -792,16 +967,18 @@ def create_default_template() -> str:
 def generate_chart_sections(svg_files: list, project_name: str) -> str:
     """Generate HTML sections for charts"""
     chart_descriptions = {
-        "download-trends.svg": "📈 Download Trends",
         "version-comparison.svg": "📊 Version Comparison", 
-        "version-specific.svg": "🎯 Version Specific"
+        "version-specific.svg": "🎯 Version Specific",
+        "installer-stats-pie.svg": "🔧 Installer Statistics",
+        "country-stats-pie.svg": "🌍 Download by Country"
     }
     
-    # Define priority order for charts - Download Trends first
+    # Define priority order for charts - Download Trends removed
     priority_order = [
-        "download-trends.svg",
         "version-comparison.svg", 
-        "version-specific.svg"
+        "version-specific.svg",
+        "installer-stats-pie.svg",
+        "country-stats-pie.svg"
     ]
     
     # Sort files by priority, then alphabetically
@@ -818,7 +995,7 @@ def generate_chart_sections(svg_files: list, project_name: str) -> str:
         sections += f'''
     <div class="chart-section">
         <div class="chart-title">{title}</div>
-        <img src="{svg_file}" alt="{title} for {project_name}">
+        <img src="{svg_file}" alt="{title} for {project_name}" class="svg-chart">
     </div>'''
     
     return sections
@@ -875,6 +1052,9 @@ def execute_bigquery_job(job_name: str, job_config: dict):
         elif job_type == "installer_stats_30d":
             # Create installer statistics pie chart
             create_installer_pie_chart(rows, results.schema, project_name)
+        elif job_type == "download_by_country_30d":
+            # Create country statistics pie chart
+            create_country_pie_chart(rows, results.schema, project_name)
         else:
             # Create and save SVG chart (fixed filename for GitHub Actions)
             create_svg_chart(rows, results.schema, job_type, project_name)
@@ -899,6 +1079,15 @@ def execute_bigquery_job(job_name: str, job_config: dict):
                 download_count = getattr(row, 'download_count', 0)
                 percentage = getattr(row, 'percentage', 0)
                 print(f"{installer_name:<20} {download_count:<12,} {percentage:<10.2f}%")
+        elif job_type == "download_by_country_30d":
+            print("Country Statistics Result:")
+            print(f"{'Country Code':<15} {'Downloads':<12} {'Percentage':<10}")
+            print("-" * 40)
+            for row in rows:
+                country_code = getattr(row, 'country_code', 'Unknown')
+                download_count = getattr(row, 'download_count', 0)
+                percentage = getattr(row, 'percentage', 0)
+                print(f"{country_code:<15} {download_count:<12,} {percentage:<10.2f}%")
         elif rows and 'version' in [field.name for field in results.schema]:
             print("Results (showing first 20 rows):")
             print(f"{'Date':<12} {'Version':<15} {'Downloads':<10}")
