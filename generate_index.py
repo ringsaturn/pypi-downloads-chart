@@ -9,6 +9,30 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+def format_number(num):
+    """Format number with appropriate suffixes (K, M, B)"""
+    if num >= 1_000_000_000:
+        return f"{num / 1_000_000_000:.1f}B"
+    elif num >= 1_000_000:
+        return f"{num / 1_000_000:.1f}M"
+    elif num >= 1_000:
+        return f"{num / 1_000:.1f}K"
+    else:
+        return str(num)
+
+
+def read_total_downloads(project_path):
+    """Read total downloads from project directory"""
+    total_downloads_file = os.path.join(project_path, 'total_downloads.txt')
+    if os.path.exists(total_downloads_file):
+        try:
+            with open(total_downloads_file, 'r') as f:
+                return int(f.read().strip())
+        except (ValueError, IOError):
+            pass
+    return None
+
+
 def generate_project_index(output_dir="output", pages_dir="output"):
     """Generate index page with project links"""
     
@@ -21,10 +45,13 @@ def generate_project_index(output_dir="output", pages_dir="output"):
                 # Check if directory has SVG files (indicating it's a project)
                 svg_files = [f for f in os.listdir(project_path) if f.endswith('.svg')]
                 if svg_files:
+                    total_downloads = read_total_downloads(project_path)
                     projects.append({
                         'name': item,
                         'chart_count': len(svg_files),
-                        'has_html': os.path.exists(os.path.join(project_path, 'index.html'))
+                        'has_html': os.path.exists(os.path.join(project_path, 'index.html')),
+                        'total_downloads': total_downloads,
+                        'has_badge': os.path.exists(os.path.join(project_path, 'pypi-downloads-badge.svg'))
                     })
     
     # Also check jobs.toml for project info
@@ -128,6 +155,7 @@ def generate_project_index(output_dir="output", pages_dir="output"):
             align-items: center;
             font-size: 0.9em;
             color: #888;
+            margin-bottom: 15px;
         }}
         
         .chart-count {{
@@ -137,6 +165,27 @@ def generate_project_index(output_dir="output", pages_dir="output"):
             border-radius: 12px;
             font-size: 0.8em;
             font-weight: bold;
+        }}
+        
+        .total-downloads {{
+            background: #f3e5f5;
+            color: #7b1fa2;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }}
+        
+        .download-badge {{
+            text-align: center;
+            margin-bottom: 15px;
+        }}
+        
+        .download-badge img {{
+            max-height: 20px;
+            border-radius: 3px;
         }}
         
         .update-time {{
@@ -204,12 +253,31 @@ def generate_project_index(output_dir="output", pages_dir="output"):
         for project in sorted(projects, key=lambda x: x['name']):
             name = project['name']
             chart_count = project['chart_count']
+            total_downloads = project['total_downloads']
+            has_badge = project['has_badge']
             description = project_descriptions.get(name, {}).get('description', f'Download statistics for {name}')
             time_range = project_descriptions.get(name, {}).get('time_range', 45)
             
+            # Generate total downloads display
+            downloads_display = ""
+            badge_display = ""
+            
+            if total_downloads is not None:
+                formatted_downloads = format_number(total_downloads)
+                downloads_display = f'''
+            <div class="total-downloads">
+                📥 Total Downloads: {total_downloads:,} ({formatted_downloads})
+            </div>'''
+            
+            if has_badge:
+                badge_display = f'''
+            <div class="download-badge">
+                <img src="{name}/pypi-downloads-badge.svg" alt="Download Badge for {name}">
+            </div>'''
+            
             html_content += f'''        <a href="{name}/index.html" class="project-card">
             <div class="project-name">📦 {name}</div>
-            <div class="project-description">{description}</div>
+            <div class="project-description">{description}</div>{downloads_display}{badge_display}
             <div class="project-stats">
                 <span>Last {time_range} days</span>
                 <span class="chart-count">{chart_count} charts</span>

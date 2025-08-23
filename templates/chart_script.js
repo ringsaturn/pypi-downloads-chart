@@ -311,6 +311,8 @@ async function initVersionChart() {
     const errorEl = document.getElementById('versionError');
     const chartEl = document.getElementById('versionChart');
     const controlsEl = document.getElementById('versionControls');
+    // Find the version chart section by traversing up from the version chart element
+    const versionSection = document.getElementById('versionChart').closest('.chart-section');
     
     try {
         loadingEl.style.display = 'block';
@@ -335,6 +337,15 @@ async function initVersionChart() {
                 }
                 return 0;
             });
+        
+        // Check if we have enough versions for comparison (need at least 2 versions)
+        if (availableVersions.length < 2) {
+            console.log('Not enough versions for comparison, hiding version chart section');
+            if (versionSection) {
+                versionSection.style.display = 'none';
+            }
+            return;
+        }
         
         loadingEl.style.display = 'none';
         controlsEl.style.display = 'block';
@@ -362,8 +373,13 @@ async function initVersionChart() {
         
     } catch (error) {
         loadingEl.style.display = 'none';
-        errorEl.style.display = 'block';
-        errorEl.textContent = `Failed to load version data: ${error.message}`;
+        console.log('Failed to load version data, hiding version chart section');
+        
+        // Hide the entire version section if there's an error loading data
+        if (versionSection) {
+            versionSection.style.display = 'none';
+        }
+        
         console.error('Error loading version chart:', error);
     }
 }
