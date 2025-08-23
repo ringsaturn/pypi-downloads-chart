@@ -2,9 +2,9 @@
 
 [jobs.download_by_date]
 sql = "sqls/download_by_date.sql"
-vars = { project_name = "tzfpy", time_range = 45 }
+vars = { project_name = "tzfpy", time_range = 365 }
 
 # 查看所有版本的逐日下载量
 [jobs.download_by_date_all_versions]
 sql = "sqls/download_by_date_by_version.sql"
-vars = { project_name = "tzfpy", time_range = 45, version_filter = "all" }
+vars = { project_name = "tzfpy", time_range = 365, version_filter = "all" }
