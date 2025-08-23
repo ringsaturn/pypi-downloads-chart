@@ -23,7 +23,7 @@ permissions:
 # 确保只有一个部署任务同时运行
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
