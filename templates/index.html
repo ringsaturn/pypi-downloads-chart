@@ -655,15 +655,25 @@
                 <img src="pypi-downloads-badge.svg" alt="Total PyPI Downloads" class="download-badge">
                 <div class="badge-description">Total Downloads</div>
             </div>
+            <div class="badge-item">
+                <img src="downloads-(30d)-badge.svg" alt="Recent 30 Days Downloads" class="download-badge">
+                <div class="badge-description">Recent 30 Days</div>
+            </div>
         </div>
         
         <!-- Markdown Copy Section for Badges -->
         <div class="badge-markdown-section">
             <h4>📋 Copy Badge Markdown</h4>
             <div class="markdown-copy-item">
-                <textarea id="badgeMdText" class="markdown-textarea" readonly>[![PyPI Downloads](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/pypi-downloads-badge.svg)](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/index.html)</textarea>
-                <button class="btn btn-primary copy-btn" onclick="copyToClipboard('badgeMdText', this)">
-                    📋 Copy Badge
+                <textarea id="totalBadgeMdText" class="markdown-textarea" readonly>[![PyPI Downloads](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/pypi-downloads-badge.svg)](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/index.html)</textarea>
+                <button class="btn btn-primary copy-btn" onclick="copyToClipboard('totalBadgeMdText', this)">
+                    📋 Copy Total Downloads
+                </button>
+            </div>
+            <div class="markdown-copy-item">
+                <textarea id="recentBadgeMdText" class="markdown-textarea" readonly>[![Downloads (30d)](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/downloads-(30d)-badge.svg)](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/index.html)</textarea>
+                <button class="btn btn-primary copy-btn" onclick="copyToClipboard('recentBadgeMdText', this)">
+                    📋 Copy 30-Day Downloads
                 </button>
             </div>
         </div>

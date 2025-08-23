@@ -33,6 +33,18 @@ def read_total_downloads(project_path):
     return None
 
 
+def read_recent_30_days_downloads(project_path):
+    """Read recent 30 days downloads from project directory"""
+    recent_downloads_file = os.path.join(project_path, 'recent_30_days_downloads.txt')
+    if os.path.exists(recent_downloads_file):
+        try:
+            with open(recent_downloads_file, 'r') as f:
+                return int(f.read().strip())
+        except (ValueError, IOError):
+            pass
+    return None
+
+
 def generate_project_index(output_dir="output", pages_dir="output"):
     """Generate index page with project links"""
     
@@ -46,12 +58,15 @@ def generate_project_index(output_dir="output", pages_dir="output"):
                 svg_files = [f for f in os.listdir(project_path) if f.endswith('.svg')]
                 if svg_files:
                     total_downloads = read_total_downloads(project_path)
+                    recent_downloads = read_recent_30_days_downloads(project_path)
                     projects.append({
                         'name': item,
                         'chart_count': len(svg_files),
                         'has_html': os.path.exists(os.path.join(project_path, 'index.html')),
                         'total_downloads': total_downloads,
-                        'has_badge': os.path.exists(os.path.join(project_path, 'pypi-downloads-badge.svg'))
+                        'recent_30_days_downloads': recent_downloads,
+                        'has_badge': os.path.exists(os.path.join(project_path, 'pypi-downloads-badge.svg')),
+                        'has_recent_badge': os.path.exists(os.path.join(project_path, 'downloads-(30d)-badge.svg'))
                     })
     
     # Also check jobs.toml for project info
@@ -257,25 +272,40 @@ def generate_project_index(output_dir="output", pages_dir="output"):
             name = project['name']
             chart_count = project['chart_count']
             total_downloads = project['total_downloads']
+            recent_downloads = project['recent_30_days_downloads']
             has_badge = project['has_badge']
+            has_recent_badge = project['has_recent_badge']
             description = project_descriptions.get(name, {}).get('description', f'Download statistics for {name}')
             time_range = project_descriptions.get(name, {}).get('time_range', 45)
             
-            # Generate total downloads display
+            # Generate downloads display
             downloads_display = ""
             badge_display = ""
             
             if total_downloads is not None:
                 formatted_downloads = format_number(total_downloads)
-                downloads_display = f'''
+                downloads_display += f'''
             <div class="total-downloads">
                 📥 Total Downloads: {total_downloads:,} ({formatted_downloads})
             </div>'''
             
+            if recent_downloads is not None:
+                formatted_recent = format_number(recent_downloads)
+                downloads_display += f'''
+            <div class="total-downloads" style="background: #e8f5e8; color: #2e7d32;">
+                📊 Recent 30 Days: {recent_downloads:,} ({formatted_recent})
+            </div>'''
+            
             if has_badge:
-                badge_display = f'''
+                badge_display += f'''
             <div class="download-badge">
-                <img src="{name}/pypi-downloads-badge.svg" alt="Download Badge for {name}">
+                <img src="{name}/pypi-downloads-badge.svg" alt="Total Download Badge for {name}">
+            </div>'''
+            
+            if has_recent_badge:
+                badge_display += f'''
+            <div class="download-badge">
+                <img src="{name}/downloads-(30d)-badge.svg" alt="30-Day Download Badge for {name}">
             </div>'''
             
             html_content += f'''        <a href="{name}/index.html" class="project-card">

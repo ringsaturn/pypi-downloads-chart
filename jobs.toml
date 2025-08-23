@@ -1,5 +1,17 @@
 [jobs]
 
+[jobs.maturin.download_by_date]
+sql = "sqls/download_by_date.sql"
+vars = { project_name = "maturin", time_range = 365 }
+
+[jobs.maturin.total_downloads]
+sql = "sqls/total_downloads.sql"
+vars = { project_name = "maturin" }
+
+[jobs.maturin.recent_30_days_downloads]
+sql = "sqls/recent_30_days_downloads.sql"
+vars = { project_name = "maturin" }
+
 [jobs.tzfpy.download_by_date]
 sql = "sqls/download_by_date.sql"
 vars = { project_name = "tzfpy", time_range = 365 }
@@ -14,10 +26,19 @@ vars = { project_name = "tzfpy", time_range = 365, version_filter = "all" }
 sql = "sqls/total_downloads.sql"
 vars = { project_name = "tzfpy" }
 
+# 查看最近30天下载量
+[jobs.tzfpy.recent_30_days_downloads]
+sql = "sqls/recent_30_days_downloads.sql"
+vars = { project_name = "tzfpy" }
+
 [jobs.timezonefinder.download_by_date]
 sql = "sqls/download_by_date.sql"
 vars = { project_name = "timezonefinder", time_range = 365 }
 
 [jobs.timezonefinder.total_downloads]
 sql = "sqls/total_downloads.sql"
+vars = { project_name = "timezonefinder" }
+
+[jobs.timezonefinder.recent_30_days_downloads]
+sql = "sqls/recent_30_days_downloads.sql"
 vars = { project_name = "timezonefinder" }

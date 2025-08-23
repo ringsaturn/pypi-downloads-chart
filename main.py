@@ -297,6 +297,34 @@ def save_total_downloads_badge(rows, schema, project_name: str, output_dir: str 
     return badge_path
 
 
+def save_recent_30_days_badge(rows, schema, project_name: str, output_dir: str = "output") -> str:
+    """Save recent 30 days downloads count as a badge"""
+    if not rows:
+        print("No recent 30 days downloads data to create badge")
+        return ""
+    
+    # Get recent downloads from first row (should only be one row)
+    recent_downloads = getattr(rows[0], 'recent_30_days_downloads', 0)
+    formatted_recent = format_number(recent_downloads)
+    
+    # Create badge
+    badge_path = create_badge_svg(
+        label="Downloads (30d)", 
+        value=formatted_recent, 
+        color="#28a745",  # Green color for recent activity
+        output_dir=output_dir, 
+        project_name=project_name
+    )
+    
+    # Also save raw number for later use
+    project_output_dir = os.path.join(output_dir, project_name) if project_name else output_dir
+    recent_downloads_file = os.path.join(project_output_dir, "recent_30_days_downloads.txt")
+    with open(recent_downloads_file, 'w', encoding='utf-8') as f:
+        f.write(str(recent_downloads))
+    
+    return badge_path
+
+
 def generate_project_html(project_name: str, output_dir: str = "output", template_path: str = "templates/index.html") -> str:
     """Generate HTML page for a project using new CSV-based template"""
     project_output_dir = os.path.join(output_dir, project_name)
@@ -569,6 +597,9 @@ def execute_bigquery_job(job_name: str, job_config: dict):
         if job_type == "total_downloads":
             # Create badge for total downloads
             save_total_downloads_badge(rows, results.schema, project_name)
+        elif job_type == "recent_30_days_downloads":
+            # Create badge for recent 30 days downloads
+            save_recent_30_days_badge(rows, results.schema, project_name)
         else:
             # Create and save SVG chart (fixed filename for GitHub Actions)
             create_svg_chart(rows, results.schema, job_type, project_name)
@@ -579,6 +610,11 @@ def execute_bigquery_job(job_name: str, job_config: dict):
             total_downloads = getattr(rows[0], 'total_downloads', 0)
             formatted_total = format_number(total_downloads)
             print(f"Total Downloads: {total_downloads:,} ({formatted_total})")
+        elif job_type == "recent_30_days_downloads":
+            print("Recent 30 Days Downloads Result:")
+            recent_downloads = getattr(rows[0], 'recent_30_days_downloads', 0)
+            formatted_recent = format_number(recent_downloads)
+            print(f"Recent 30 Days Downloads: {recent_downloads:,} ({formatted_recent})")
         elif rows and 'version' in [field.name for field in results.schema]:
             print("Results (showing first 20 rows):")
             print(f"{'Date':<12} {'Version':<15} {'Downloads':<10}")
