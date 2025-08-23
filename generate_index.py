@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-def generate_project_index(output_dir="output", pages_dir="pages"):
+def generate_project_index(output_dir="output", pages_dir="output"):
     """Generate index page with project links"""
     
     # Find all project directories
@@ -207,7 +207,7 @@ def generate_project_index(output_dir="output", pages_dir="pages"):
             description = project_descriptions.get(name, {}).get('description', f'Download statistics for {name}')
             time_range = project_descriptions.get(name, {}).get('time_range', 45)
             
-            html_content += f'''        <a href="{name}/" class="project-card">
+            html_content += f'''        <a href="{name}/index.html" class="project-card">
             <div class="project-name">📦 {name}</div>
             <div class="project-description">{description}</div>
             <div class="project-stats">
