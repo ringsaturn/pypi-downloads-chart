@@ -1,20 +1,36 @@
 [jobs]
 
+# tzfpy
+
 [jobs.tzfpy.download_by_date]
 sql = "sqls/download_by_date.sql"
 vars = { project_name = "tzfpy", time_range = 365 }
 
-# 查看所有版本的逐日下载量
+
 [jobs.tzfpy.download_by_date_all_versions]
 sql = "sqls/download_by_date_by_version.sql"
 vars = { project_name = "tzfpy", time_range = 365, version_filter = "all" }
 
-# 查看历史总下载量
 [jobs.tzfpy.total_downloads]
 sql = "sqls/total_downloads.sql"
 vars = { project_name = "tzfpy" }
 
-# 查看最近30天下载量
 [jobs.tzfpy.recent_30_days_downloads]
 sql = "sqls/recent_30_days_downloads.sql"
 vars = { project_name = "tzfpy" }
+
+## uv
+
+[jobs.uv.download_by_date]
+sql = "sqls/download_by_date.sql"
+vars = { project_name = "uv", time_range = 365 }
+
+# 查看历史总下载量
+[jobs.uv.total_downloads]
+sql = "sqls/total_downloads.sql"
+vars = { project_name = "uv" }
+
+# 查看最近30天下载量
+[jobs.uv.recent_30_days_downloads]
+sql = "sqls/recent_30_days_downloads.sql"
+vars = { project_name = "uv" }
