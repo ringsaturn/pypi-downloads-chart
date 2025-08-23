@@ -767,6 +767,32 @@
         </div>
     </div>
     
+    <!-- Installer Statistics Chart -->
+    <div class="chart-section">
+        <div class="chart-title">🔧 Installer Statistics (Recent 30 Days)</div>
+        <div id="installerLoading" class="loading">Loading installer statistics data...</div>
+        <div id="installerError" class="error" style="display: none;"></div>
+        
+        <div class="chart-container">
+            <canvas id="installerChart" style="display: none;"></canvas>
+        </div>
+        
+        <!-- Installer Chart Data Actions -->
+        <div id="installerChartActions" class="chart-actions" style="display: none;">
+            <div class="chart-actions-info">
+                <span id="installerDataInfo" class="data-info">📊 <span id="installerDataCount">0</span> installers</span>
+            </div>
+            <div class="chart-actions-buttons">
+                <button class="btn btn-outline btn-sm" onclick="previewInstallerData()">
+                    👁️ Preview Data
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="downloadInstallerData()">
+                    📥 Download CSV
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Data Preview Modal -->
     <div id="dataPreviewModal" class="modal" style="display: none;">
         <div class="modal-content">
@@ -795,6 +821,16 @@
                 <textarea id="trendsMdText" class="markdown-textarea" readonly>[![PyPI Downloads](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/download-trends.svg)](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/index.html)</textarea>
                 <button class="btn btn-primary copy-btn" onclick="copyToClipboard('trendsMdText', this)">
                     📋 Copy Trends Chart
+                </button>
+            </div>
+        </div>
+        
+        <div class="markdown-copy-section">
+            <h4>🔧 Installer Statistics Chart</h4>
+            <div class="markdown-copy-item">
+                <textarea id="installerMdText" class="markdown-textarea" readonly>[![Installer Stats](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/installer-stats-pie.svg)](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/index.html)</textarea>
+                <button class="btn btn-primary copy-btn" onclick="copyToClipboard('installerMdText', this)">
+                    📋 Copy Installer Stats
                 </button>
             </div>
         </div>

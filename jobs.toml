@@ -19,6 +19,10 @@ vars = { project_name = "tzfpy" }
 sql = "sqls/recent_30_days_downloads.sql"
 vars = { project_name = "tzfpy" }
 
+[jobs.tzfpy.installer_stats_30d]
+sql = "sqls/installer_stats_30d.sql"
+vars = { project_name = "tzfpy" }
+
 ## uv
 
 [jobs.uv.download_by_date]
@@ -33,4 +37,9 @@ vars = { project_name = "uv" }
 # 查看最近30天下载量
 [jobs.uv.recent_30_days_downloads]
 sql = "sqls/recent_30_days_downloads.sql"
+vars = { project_name = "uv" }
+
+# 查看最近30天安装工具统计
+[jobs.uv.installer_stats_30d]
+sql = "sqls/installer_stats_30d.sql"
 vars = { project_name = "uv" }

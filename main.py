@@ -1,4 +1,5 @@
 import csv
+import math
 import os
 import tomllib
 from datetime import datetime, timezone
@@ -42,13 +43,16 @@ def save_results_to_csv(rows, schema, job_name: str, project_name: str = None, o
     
     os.makedirs(project_output_dir, exist_ok=True)
     
+    # Extract job type from job_name (remove project prefix)
+    job_type = job_name.split('.')[-1] if '.' in job_name else job_name
+    
     # Generate filename with timestamp for historical records
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    filename = f"{job_name}_{timestamp}.csv"
+    filename = f"{job_type}_{timestamp}.csv"
     filepath = os.path.join(project_output_dir, filename)
     
     # Also create a "latest" symlink for easy access
-    latest_filename = f"{job_name}_latest.csv"
+    latest_filename = f"{job_type}_latest.csv"
     latest_filepath = os.path.join(project_output_dir, latest_filename)
     
     if not rows:
@@ -264,6 +268,119 @@ def generate_svg_chart(df, chart_type: str, project_name: str, job_name: str) ->
     return '\n'.join(svg_parts)
 
 
+def generate_pie_chart_svg(df, project_name: str) -> str:
+    """Generate SVG pie chart for installer statistics"""
+    # Chart dimensions
+    width = 800
+    height = 500
+    margin = 60
+    
+    # Colors for pie chart segments
+    colors = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+        '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+        '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
+    ]
+    
+    # Calculate total downloads
+    total_downloads = df['download_count'].sum()
+    
+    # Calculate pie chart parameters
+    center_x = width // 2
+    center_y = height // 2
+    radius = min(width, height) // 3 - margin
+    
+    # Start building SVG
+    svg_parts = []
+    
+    # SVG header
+    svg_parts.append(f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" style="background-color: white; border: 1px solid #e9ecef; border-radius: 8px;">
+    <defs>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.1"/>
+        </filter>
+    </defs>''')
+    
+    # Title
+    svg_parts.append(f'    <text x="{width//2}" y="30" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="#2c3e50">Recent 30 Days Installer Statistics - {project_name}</text>')
+    
+    # Calculate pie segments
+    current_angle = 0
+    for i, (_, row) in enumerate(df.iterrows()):
+        installer_name = row['installer_name']
+        download_count = row['download_count']
+        percentage = row['percentage']
+        
+        # Calculate segment angle
+        segment_angle = (download_count / total_downloads) * 360
+        
+        # Skip very small segments (less than 1%)
+        if segment_angle < 3.6:  # 1% of 360 degrees
+            continue
+        
+        # Calculate arc parameters
+        start_angle_rad = math.radians(current_angle)
+        end_angle_rad = math.radians(current_angle + segment_angle)
+        
+        # Calculate arc path
+        x1 = center_x + radius * math.cos(start_angle_rad)
+        y1 = center_y + radius * math.sin(start_angle_rad)
+        x2 = center_x + radius * math.cos(end_angle_rad)
+        y2 = center_y + radius * math.sin(end_angle_rad)
+        
+        # Determine if arc is large (more than 180 degrees)
+        large_arc_flag = 1 if segment_angle > 180 else 0
+        
+        # Create arc path
+        arc_path = f"M {center_x} {center_y} L {x1} {y1} A {radius} {radius} 0 {large_arc_flag} 1 {x2} {y2} Z"
+        
+        # Add pie segment
+        color = colors[i % len(colors)]
+        svg_parts.append(f'    <path d="{arc_path}" fill="{color}" filter="url(#shadow)"/>')
+        
+        # Add label if segment is large enough
+        if segment_angle > 15:  # Only label segments larger than 15 degrees
+            label_angle_rad = math.radians(current_angle + segment_angle / 2)
+            label_radius = radius * 0.7
+            label_x = center_x + label_radius * math.cos(label_angle_rad)
+            label_y = center_y + label_radius * math.sin(label_angle_rad)
+            
+            # Add percentage text
+            svg_parts.append(f'    <text x="{label_x}" y="{label_y}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="white">{percentage}%</text>')
+        
+        current_angle += segment_angle
+    
+    # Add legend
+    legend_x = margin
+    legend_y = height - margin - 20
+    legend_item_height = 25
+    
+    svg_parts.append(f'    <text x="{legend_x}" y="{legend_y - 10}" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">Installers:</text>')
+    
+    for i, (_, row) in enumerate(df.iterrows()):
+        if i >= 10:  # Limit legend to first 10 items
+            break
+            
+        installer_name = row['installer_name']
+        download_count = row['download_count']
+        percentage = row['percentage']
+        
+        color = colors[i % len(colors)]
+        y_pos = legend_y + i * legend_item_height
+        
+        # Legend item
+        svg_parts.append(f'    <rect x="{legend_x}" y="{y_pos - 8}" width="12" height="12" fill="{color}"/>')
+        svg_parts.append(f'    <text x="{legend_x + 20}" y="{y_pos}" font-family="system-ui, sans-serif" font-size="11" fill="#2c3e50">{installer_name} ({percentage}% - {download_count:,})</text>')
+    
+    # Add total downloads info
+    total_text = f"Total Downloads: {total_downloads:,}"
+    svg_parts.append(f'    <text x="{width//2}" y="{height - 20}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">{total_text}</text>')
+    
+    svg_parts.append('</svg>')
+    
+    return '\n'.join(svg_parts)
+
+
 def create_svg_chart(rows, schema, job_name: str, project_name: str, output_dir: str = "output") -> str:
     """Create SVG chart from BigQuery results"""
     # Create project-specific directory
@@ -275,7 +392,8 @@ def create_svg_chart(rows, schema, job_name: str, project_name: str, output_dir:
     chart_name_mapping = {
         "download_by_date": "download-trends",
         "download_by_date_all_versions": "version-comparison", 
-        "download_by_date_version": "version-specific"
+        "download_by_date_version": "version-specific",
+        "installer_stats_30d": "installer-stats-pie"
     }
     
     # Get chart name from mapping or use job name
@@ -314,6 +432,45 @@ def create_svg_chart(rows, schema, job_name: str, project_name: str, output_dir:
         f.write(svg_content)
     
     print(f"SVG chart saved to: {filepath}")
+    return filepath
+
+
+def create_installer_pie_chart(rows, schema, project_name: str, output_dir: str = "output") -> str:
+    """Create pie chart for installer statistics"""
+    # Create project-specific directory
+    project_output_dir = os.path.join(output_dir, project_name)
+    os.makedirs(project_output_dir, exist_ok=True)
+    
+    # Create filename
+    filename = "installer-stats-pie.svg"
+    filepath = os.path.join(project_output_dir, filename)
+    
+    if not rows:
+        print(f"No installer data to create pie chart for project: {project_name}")
+        return filepath
+    
+    # Get field names from schema
+    field_names = [field.name for field in schema]
+    
+    # Convert to pandas DataFrame for easier plotting
+    data = []
+    for row in rows:
+        row_data = {}
+        for field_name in field_names:
+            value = getattr(row, field_name)
+            row_data[field_name] = value
+        data.append(row_data)
+    
+    df = pd.DataFrame(data)
+    
+    # Generate SVG pie chart
+    svg_content = generate_pie_chart_svg(df, project_name)
+    
+    # Save SVG to file
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(svg_content)
+    
+    print(f"Installer pie chart saved to: {filepath}")
     return filepath
 
 
@@ -453,6 +610,8 @@ def generate_project_html(project_name: str, output_dir: str = "output", templat
         for file in os.listdir(project_output_dir):
             if file.endswith('.csv'):
                 csv_files.append(file)
+    
+
     
     # Read template
     template_content = ""
@@ -713,6 +872,9 @@ def execute_bigquery_job(job_name: str, job_config: dict):
         elif job_type == "recent_30_days_downloads":
             # Create badge for recent 30 days downloads
             save_recent_30_days_badge(rows, results.schema, project_name)
+        elif job_type == "installer_stats_30d":
+            # Create installer statistics pie chart
+            create_installer_pie_chart(rows, results.schema, project_name)
         else:
             # Create and save SVG chart (fixed filename for GitHub Actions)
             create_svg_chart(rows, results.schema, job_type, project_name)
@@ -728,6 +890,15 @@ def execute_bigquery_job(job_name: str, job_config: dict):
             recent_downloads = getattr(rows[0], 'recent_30_days_downloads', 0)
             formatted_recent = format_number(recent_downloads)
             print(f"Recent 30 Days Downloads: {recent_downloads:,} ({formatted_recent})")
+        elif job_type == "installer_stats_30d":
+            print("Installer Statistics Result:")
+            print(f"{'Installer':<20} {'Downloads':<12} {'Percentage':<10}")
+            print("-" * 45)
+            for row in rows:
+                installer_name = getattr(row, 'installer_name', 'Unknown')
+                download_count = getattr(row, 'download_count', 0)
+                percentage = getattr(row, 'percentage', 0)
+                print(f"{installer_name:<20} {download_count:<12,} {percentage:<10.2f}%")
         elif rows and 'version' in [field.name for field in results.schema]:
             print("Results (showing first 20 rows):")
             print(f"{'Date':<12} {'Version':<15} {'Downloads':<10}")

@@ -70,10 +70,14 @@ async function loadCsvData(filename) {
                 row[header.trim()] = values[index]?.trim();
             });
             
-            // Skip rows with empty or invalid data
-            if (!row.download_date || !row.daily_downloads) continue;
-            
-            data.push(row);
+            // Check if this is installer data or download trend data
+            if (row.installer_name && row.download_count) {
+                // Installer statistics data
+                data.push(row);
+            } else if (row.download_date && row.daily_downloads) {
+                // Download trend data
+                data.push(row);
+            }
         }
         
         return data;
@@ -91,6 +95,8 @@ async function tryLoadRecentCsv(pattern) {
         latestFilename = 'download_by_date_latest.csv';
     } else if (pattern === 'versions') {
         latestFilename = 'download_by_date_all_versions_latest.csv';
+    } else if (pattern === 'installer') {
+        latestFilename = 'installer_stats_30d_latest.csv';
     }
     
     // Try the latest file first
@@ -111,6 +117,8 @@ async function tryLoadRecentCsv(pattern) {
         relevantFiles = files.filter(f => f.includes('download_by_date_') && !f.includes('all_versions') && !f.includes('latest'));
     } else if (pattern === 'versions') {
         relevantFiles = files.filter(f => f.includes('download_by_date_all_versions_') && !f.includes('latest'));
+    } else if (pattern === 'installer') {
+        relevantFiles = files.filter(f => f.includes('installer_stats_30d_') && !f.includes('latest'));
     }
     
     // Sort by filename (which includes timestamp) in descending order
@@ -941,4 +949,131 @@ async function copyToClipboard(textareaId, buttonElement) {
 document.addEventListener('DOMContentLoaded', function() {
     initTrendsChart();
     initVersionChart();
+    initInstallerChart();
 });
+
+// Installer statistics functions
+let installerChart = null;
+
+async function initInstallerChart() {
+    const loadingEl = document.getElementById('installerLoading');
+    const errorEl = document.getElementById('installerError');
+    const chartEl = document.getElementById('installerChart');
+    const actionsEl = document.getElementById('installerChartActions');
+    const dataCountEl = document.getElementById('installerDataCount');
+    
+    try {
+        // Try to load installer statistics CSV
+        const data = await tryLoadRecentCsv('installer');
+        
+        if (data && data.length > 0) {
+            // Prepare chart data
+            const chartData = {
+                labels: data.map(row => row.installer_name),
+                datasets: [{
+                    data: data.map(row => parseInt(row.download_count)),
+                    backgroundColor: [
+                        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+                        '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+                        '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            };
+            
+            // Create pie chart
+            const ctx = chartEl.getContext('2d');
+            installerChart = new Chart(ctx, {
+                type: 'pie',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(2);
+                                    return `${label}: ${value.toLocaleString()} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Show chart
+            chartEl.style.display = 'block';
+            actionsEl.style.display = 'flex';
+            dataCountEl.textContent = data.length;
+            
+            // Hide loading
+            loadingEl.style.display = 'none';
+        } else {
+            throw new Error('No installer data available');
+        }
+    } catch (error) {
+        console.error('Error loading installer chart:', error);
+        errorEl.textContent = 'Failed to load installer statistics data. Please try again later.';
+        errorEl.style.display = 'block';
+        loadingEl.style.display = 'none';
+    }
+}
+
+function previewInstallerData() {
+    tryLoadRecentCsv('installer').then(data => {
+        const csvContent = convertInstallerDataToCSV(data);
+        showDataPreview('Installer Statistics Data Preview', csvContent, () => downloadInstallerData());
+    }).catch(error => {
+        console.error('Error previewing installer data:', error);
+        alert('Failed to preview installer data');
+    });
+}
+
+function downloadInstallerData() {
+    tryLoadRecentCsv('installer').then(data => {
+        const csvContent = convertInstallerDataToCSV(data);
+        const filename = `installer-statistics-${getCurrentDateString()}.csv`;
+        downloadCSV(csvContent, filename);
+    }).catch(error => {
+        console.error('Error downloading installer data:', error);
+        alert('Failed to download installer data');
+    });
+}
+
+function convertInstallerDataToCSV(data) {
+    if (!data || data.length === 0) {
+        return 'installer_name,download_count,percentage\n';
+    }
+    
+    const headers = ['installer_name', 'download_count', 'percentage'];
+    const csvRows = [headers.join(',')];
+    
+    data.forEach(row => {
+        const values = headers.map(header => {
+            const value = row[header] || '';
+            // Escape commas and quotes in values
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+        });
+        csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+}
