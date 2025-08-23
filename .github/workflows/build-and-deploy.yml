@@ -1,0 +1,134 @@
+name: Build Charts and Deploy to Pages
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天 UTC 00:00 运行
+  workflow_dispatch:  # 允许手动触发
+  push:
+    branches:
+      - main
+    paths:
+      - 'jobs.toml'
+      - 'main.py'
+      - 'generate_index.py'
+      - 'sqls/**'
+      - 'templates/**'
+
+# 设置 GitHub Pages 部署权限
+permissions:
+  contents: write  # 允许提交文件
+  pages: write     # 允许部署到 Pages
+  id-token: write  # 允许 OIDC 认证
+
+# 确保只有一个部署任务同时运行
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      
+    - name: Install dependencies
+      run: |
+        uv sync
+        
+    - name: Set up Google Cloud credentials
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+        
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      
+    - name: Generate charts and data
+      run: |
+        echo "🚀 Starting chart generation..."
+        uv run python main.py
+        echo "✅ Chart generation completed"
+        
+    - name: Generate index page
+      run: |
+        echo "📝 Generating index page..."
+        uv run python generate_index.py
+        echo "✅ Index page generated"
+        
+    - name: List generated files
+      run: |
+        echo "📁 Generated files:"
+        find output -type f -name "*.svg" -o -name "*.html" | head -20
+        
+    - name: Commit generated files to repository
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add output/
+        if ! git diff --cached --quiet; then
+          git commit -m "📊 Update PyPI charts - $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          git push
+          echo "✅ Files committed to repository"
+        else
+          echo "ℹ️ No changes to commit"
+        fi
+        
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+      
+    - name: Prepare deployment files
+      run: |
+        echo "📦 Preparing files for GitHub Pages deployment..."
+        mkdir -p _site
+        
+        # 复制 output 目录的所有内容到 _site
+        if [ -d "output" ]; then
+          cp -r output/* _site/
+          echo "✅ Copied output files to _site/"
+        else
+          echo "❌ Output directory not found"
+          exit 1
+        fi
+        
+        # 创建 .nojekyll 文件以允许以下划线开头的文件
+        touch _site/.nojekyll
+        
+        # 显示最终的文件结构
+        echo "📁 Final _site structure:"
+        find _site -type f | head -20
+        
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: '_site'
+        
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+      
+    - name: Upload generated files as artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: pypi-charts-${{ github.run_number }}
+        path: output/
+        retention-days: 30
+        
+    - name: Summary
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo "📊 Charts are available at: ${{ steps.deployment.outputs.page_url }}"
+        echo "📅 Generated at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
