@@ -10,3 +10,5 @@ wheels/
 .venv
 
 gha-creds-*.json
+output/
+tmp/
