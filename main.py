@@ -564,16 +564,17 @@ def execute_bigquery_job(job_name: str, job_config: dict):
         # Save results to CSV (with timestamp for historical records)
         save_results_to_csv(rows, results.schema, job_name, project_name)
         
-        # Handle different job types
-        if job_name == "total_downloads":
+        # Handle different job types (extract job type from package_name.job_type format)
+        job_type = job_name.split('.')[-1] if '.' in job_name else job_name
+        if job_type == "total_downloads":
             # Create badge for total downloads
             save_total_downloads_badge(rows, results.schema, project_name)
         else:
             # Create and save SVG chart (fixed filename for GitHub Actions)
-            create_svg_chart(rows, results.schema, job_name, project_name)
+            create_svg_chart(rows, results.schema, job_type, project_name)
         
         # Display results based on job type and schema
-        if job_name == "total_downloads":
+        if job_type == "total_downloads":
             print("Total Downloads Result:")
             total_downloads = getattr(rows[0], 'total_downloads', 0)
             formatted_total = format_number(total_downloads)
@@ -627,15 +628,25 @@ def main():
         config = tomllib.load(f)
 
     jobs = config.get("jobs", {})
-    print(f"Found {len(jobs)} jobs:")
-    for job_name in jobs.keys():
+    
+    # Parse nested structure: jobs.{package_name}.{job_type}
+    flat_jobs = {}
+    for package_name, package_jobs in jobs.items():
+        if isinstance(package_jobs, dict):
+            for job_type, job_config in package_jobs.items():
+                # Create unique job name: package_name.job_type
+                job_name = f"{package_name}.{job_type}"
+                flat_jobs[job_name] = job_config
+    
+    print(f"Found {len(flat_jobs)} jobs:")
+    for job_name in flat_jobs.keys():
         print(f"  - {job_name}")
 
     print("=" * 50)
 
     # Execute all jobs
     processed_projects = set()
-    for job_name, job_config in jobs.items():
+    for job_name, job_config in flat_jobs.items():
         execute_bigquery_job(job_name, job_config)
         
         # Track projects for HTML generation

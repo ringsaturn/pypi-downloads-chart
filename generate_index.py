@@ -61,14 +61,17 @@ def generate_project_index(output_dir="output", pages_dir="output"):
             config = tomllib.load(f)
             jobs = config.get("jobs", {})
             
-            for job_name, job_config in jobs.items():
-                variables = job_config.get("vars", {})
-                project_name = variables.get("project_name")
-                if project_name and project_name not in project_descriptions:
-                    project_descriptions[project_name] = {
-                        'description': f'PyPI package analytics for {project_name}',
-                        'time_range': variables.get('time_range', 45)
-                    }
+            # Parse nested structure: jobs.{package_name}.{job_type}
+            for package_name, package_jobs in jobs.items():
+                if isinstance(package_jobs, dict):
+                    for job_type, job_config in package_jobs.items():
+                        variables = job_config.get("vars", {})
+                        project_name = variables.get("project_name")
+                        if project_name and project_name not in project_descriptions:
+                            project_descriptions[project_name] = {
+                                'description': f'PyPI package analytics for {project_name}',
+                                'time_range': variables.get('time_range', 45)
+                            }
     except Exception as e:
         print(f"Warning: Could not read jobs.toml: {e}")
     
