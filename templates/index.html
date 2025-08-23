@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyPI Package Statistics</title>
+    <title>PyPI Package Statistics - {{PROJECT_NAME}}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
             line-height: 1.6;
             color: #333;
+            background-color: #f8f9fa;
         }
         
         .header {
@@ -20,7 +23,8 @@
             padding: 40px 0;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            border-radius: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
         
         .header h1 {
@@ -36,29 +40,163 @@
         }
         
         .chart-section {
-            margin: 40px 0;
+            margin: 30px 0;
             padding: 30px;
             border: 1px solid #e1e5e9;
-            border-radius: 10px;
-            background: #f8f9fa;
-            text-align: center;
-        }
-        
-        .chart-section img {
-            max-width: 100%;
-            height: auto;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            border-radius: 12px;
             background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
         .chart-title {
-            font-size: 1.5em;
+            font-size: 1.8em;
             color: #2c3e50;
             margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
         }
         
-
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+        
+        .version-controls {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .version-controls h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 1.1em;
+        }
+        
+        .version-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .version-checkbox {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .version-checkbox:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        .version-checkbox input[type="checkbox"] {
+            margin-right: 8px;
+            transform: scale(1.1);
+        }
+        
+        .version-checkbox label {
+            cursor: pointer;
+            font-size: 0.9em;
+            user-select: none;
+        }
+        
+        .controls-buttons {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .btn-outline {
+            background: white;
+            color: #6c757d;
+            border: 1px solid #6c757d;
+        }
+        
+        .btn-outline:hover {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .update-time {
+            background: linear-gradient(135deg, #e8f4f8 0%, #d1ecf1 100%);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #2c3e50;
+            border: 1px solid #bee5eb;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            margin: 20px 0;
+        }
         
         .footer {
             text-align: center;
@@ -68,13 +206,13 @@
             border-top: 1px solid #e1e5e9;
         }
         
-        .update-time {
-            background: #e8f4f8;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            text-align: center;
-            color: #2c3e50;
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
         }
         
         @media (max-width: 768px) {
@@ -86,8 +224,16 @@
                 font-size: 2em;
             }
             
-            .package-section {
+            .chart-section {
                 padding: 20px;
+            }
+            
+            .version-checkboxes {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+            
+            .controls-buttons {
+                justify-content: center;
             }
         }
     </style>
@@ -102,30 +248,55 @@
         <strong>Last Updated:</strong> {{LAST_UPDATE}}
     </div>
 
-    {{CHART_SECTIONS}}
+    <!-- Download Trends Chart -->
+    <div class="chart-section">
+        <div class="chart-title">📈 Download Trends</div>
+        <div id="trendsLoading" class="loading">Loading download trends data...</div>
+        <div id="trendsError" class="error" style="display: none;"></div>
+        <div class="chart-container">
+            <canvas id="trendsChart" style="display: none;"></canvas>
+        </div>
+    </div>
+
+    <!-- Version Comparison Chart -->
+    <div class="chart-section">
+        <div class="chart-title">📊 Version Comparison</div>
+        <div id="versionLoading" class="loading">Loading version comparison data...</div>
+        <div id="versionError" class="error" style="display: none;"></div>
+        
+        <div id="versionControls" class="version-controls" style="display: none;">
+            <h4>📋 Select Versions to Display:</h4>
+            <div id="versionCheckboxes" class="version-checkboxes"></div>
+            <div class="controls-buttons">
+                <button class="btn btn-primary" onclick="updateVersionChart()">Update Chart</button>
+                <button class="btn btn-secondary" onclick="selectLatestVersions()">Latest 3 Versions</button>
+                <button class="btn btn-outline" onclick="selectAllVersions()">Select All</button>
+                <button class="btn btn-outline" onclick="deselectAllVersions()">Deselect All</button>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="versionChart" style="display: none;"></canvas>
+        </div>
+    </div>
     
     <div class="footer">
         <p>
             📊 Charts generated using 
-            <a href="https://github.com/your-username/pypi-downloads-chart" target="_blank">
+            <a href="https://github.com/ringsaturn/pypi-downloads-chart" target="_blank">
                 pypi-downloads-chart
             </a>
         </p>
         <p>
             📦 Data source: 
-            <a href="https://console.cloud.google.com/bigquery?p=bigquery-public-data&d=pypi" target="_blank">
+            <a href="https://console.cloud.google.com/bigquery?p=bigquery-public-data&d=pypi&page=dataset" target="_blank">
                 PyPI BigQuery Dataset
             </a>
         </p>
         <p><small>Updates automatically daily via GitHub Actions</small></p>
     </div>
 
-    <script>
-        // Update last modified time
-        document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
-        
-        // You can add more JavaScript here for dynamic content
-        // For example, loading stats from a JSON file
-    </script>
+    {{CSV_FILES_SCRIPT}}
+    {{JAVASCRIPT_CODE}}
 </body>
 </html>

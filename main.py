@@ -49,6 +49,10 @@ def save_results_to_csv(rows, schema, job_name: str, project_name: str = None, o
     filename = f"{job_name}_{timestamp}.csv"
     filepath = os.path.join(project_output_dir, filename)
     
+    # Also create a "latest" symlink for easy access
+    latest_filename = f"{job_name}_latest.csv"
+    latest_filepath = os.path.join(project_output_dir, latest_filename)
+    
     if not rows:
         print(f"No data to save for job: {job_name}")
         return filepath
@@ -75,7 +79,20 @@ def save_results_to_csv(rows, schema, job_name: str, project_name: str = None, o
                     row_data.append(str(value) if value is not None else '')
             writer.writerow(row_data)
     
+    # Create or update the latest symlink
+    if os.path.exists(latest_filepath) or os.path.islink(latest_filepath):
+        os.unlink(latest_filepath)
+    
+    try:
+        # Create relative symlink 
+        os.symlink(filename, latest_filepath)
+    except OSError:
+        # On Windows or if symlinks aren't supported, copy the file
+        import shutil
+        shutil.copy2(filepath, latest_filepath)
+    
     print(f"Results saved to: {filepath}")
+    print(f"Latest link created: {latest_filepath}")
     return filepath
 
 
@@ -191,7 +208,7 @@ def create_simple_chart(df, ax, job_name: str, project_name: str):
 
 
 def generate_project_html(project_name: str, output_dir: str = "output", template_path: str = "templates/index.html") -> str:
-    """Generate HTML page for a project using template"""
+    """Generate HTML page for a project using new CSV-based template"""
     project_output_dir = os.path.join(output_dir, project_name)
     
     # Check if project directory exists
@@ -199,12 +216,12 @@ def generate_project_html(project_name: str, output_dir: str = "output", templat
         print(f"Project directory does not exist: {project_output_dir}")
         return ""
     
-    # Find SVG files in project directory
-    svg_files = []
+    # Find CSV files in project directory
+    csv_files = []
     if os.path.exists(project_output_dir):
         for file in os.listdir(project_output_dir):
-            if file.endswith('.svg'):
-                svg_files.append(file)
+            if file.endswith('.csv'):
+                csv_files.append(file)
     
     # Read template
     template_content = ""
@@ -213,15 +230,34 @@ def generate_project_html(project_name: str, output_dir: str = "output", templat
             template_content = f.read()
     else:
         # Create a simple default template
-        template_content = create_default_template()
+        template_content = create_default_csv_template()
+    
+    # Read JavaScript file
+    js_script_path = "templates/chart_script.js"
+    js_content = ""
+    if os.path.exists(js_script_path):
+        with open(js_script_path, 'r', encoding='utf-8') as f:
+            js_content = f.read()
     
     # Replace template variables
     html_content = template_content.replace('{{PROJECT_NAME}}', project_name)
     html_content = html_content.replace('{{LAST_UPDATE}}', datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'))
     
-    # Generate chart sections
-    chart_sections = generate_chart_sections(svg_files, project_name)
-    html_content = html_content.replace('{{CHART_SECTIONS}}', chart_sections)
+    # Generate CSV files list for JavaScript
+    csv_files_script = f"""
+    <script>
+        // Available CSV files for this project
+        window.availableCsvFiles = {csv_files};
+    </script>"""
+    
+    # Generate JavaScript code
+    javascript_code = f"""
+    <script>
+        {js_content}
+    </script>"""
+    
+    html_content = html_content.replace('{{CSV_FILES_SCRIPT}}', csv_files_script)
+    html_content = html_content.replace('{{JAVASCRIPT_CODE}}', javascript_code)
     
     # Save HTML file
     html_filepath = os.path.join(project_output_dir, 'index.html')
@@ -230,6 +266,63 @@ def generate_project_html(project_name: str, output_dir: str = "output", templat
     
     print(f"Generated HTML page: {html_filepath}")
     return html_filepath
+
+
+def create_default_csv_template() -> str:
+    """Create a default HTML template for CSV-based charts if none exists"""
+    return '''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PROJECT_NAME}} - PyPI Download Statistics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        .chart-section {
+            margin: 40px 0;
+            padding: 30px;
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+            background: #f8f9fa;
+            text-align: center;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📦 {{PROJECT_NAME}}</h1>
+        <p>PyPI Download Statistics</p>
+    </div>
+    <div class="chart-section">
+        <div class="chart-container">
+            <canvas id="trendsChart"></canvas>
+        </div>
+    </div>
+    {{CSV_FILES_SCRIPT}}
+    {{JAVASCRIPT_CODE}}
+</body>
+</html>'''
 
 
 def create_default_template() -> str:
@@ -300,7 +393,7 @@ def create_default_template() -> str:
     {{CHART_SECTIONS}}
 
     <div style="text-align: center; margin-top: 40px; color: #666;">
-        <p>Generated by <a href="https://github.com/your-username/pypi-downloads-chart">pypi-downloads-chart</a></p>
+        <p>Generated by <a href="https://github.com/ringsaturn/pypi-downloads-chart">pypi-downloads-chart</a></p>
     </div>
 </body>
 </html>'''
