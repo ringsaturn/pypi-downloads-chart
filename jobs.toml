@@ -8,3 +8,8 @@ vars = { project_name = "tzfpy", time_range = 365 }
 [jobs.download_by_date_all_versions]
 sql = "sqls/download_by_date_by_version.sql"
 vars = { project_name = "tzfpy", time_range = 365, version_filter = "all" }
+
+# 查看历史总下载量
+[jobs.total_downloads]
+sql = "sqls/total_downloads.sql"
+vars = { project_name = "tzfpy" }

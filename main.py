@@ -207,6 +207,96 @@ def create_simple_chart(df, ax, job_name: str, project_name: str):
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
 
+def format_number(num):
+    """Format number with appropriate suffixes (K, M, B)"""
+    if num >= 1_000_000_000:
+        return f"{num / 1_000_000_000:.1f}B"
+    elif num >= 1_000_000:
+        return f"{num / 1_000_000:.1f}M"
+    elif num >= 1_000:
+        return f"{num / 1_000:.1f}K"
+    else:
+        return str(num)
+
+
+def create_badge_svg(label: str, value: str, color: str = "#4c72b0", output_dir: str = "output", project_name: str = None) -> str:
+    """Create SVG badge for download statistics"""
+    # Create project-specific directory
+    if project_name:
+        project_output_dir = os.path.join(output_dir, project_name)
+    else:
+        project_output_dir = output_dir
+    
+    os.makedirs(project_output_dir, exist_ok=True)
+    
+    # Calculate text widths (approximate)
+    label_width = len(label) * 6 + 10
+    value_width = len(value) * 6 + 10
+    total_width = label_width + value_width
+    
+    # Create SVG content
+    svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="20">
+    <defs>
+        <linearGradient id="smooth" x2="0" y2="100%">
+            <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+            <stop offset="1" stop-opacity=".1"/>
+        </linearGradient>
+        <clipPath id="round">
+            <rect width="{total_width}" height="20" rx="3" fill="#fff"/>
+        </clipPath>
+    </defs>
+    <g clip-path="url(#round)">
+        <rect width="{label_width}" height="20" fill="#555"/>
+        <rect x="{label_width}" width="{value_width}" height="20" fill="{color}"/>
+        <rect width="{total_width}" height="20" fill="url(#smooth)"/>
+    </g>
+    <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+        <text x="{label_width//2}" y="15" fill="#010101" fill-opacity=".3">{label}</text>
+        <text x="{label_width//2}" y="14">{label}</text>
+        <text x="{label_width + value_width//2}" y="15" fill="#010101" fill-opacity=".3">{value}</text>
+        <text x="{label_width + value_width//2}" y="14">{value}</text>
+    </g>
+</svg>'''
+    
+    # Save badge
+    badge_filename = f"{label.lower().replace(' ', '-')}-badge.svg"
+    badge_filepath = os.path.join(project_output_dir, badge_filename)
+    
+    with open(badge_filepath, 'w', encoding='utf-8') as f:
+        f.write(svg_content)
+    
+    print(f"Badge saved: {badge_filepath}")
+    return badge_filepath
+
+
+def save_total_downloads_badge(rows, schema, project_name: str, output_dir: str = "output") -> str:
+    """Save total downloads count as a badge"""
+    if not rows:
+        print("No total downloads data to create badge")
+        return ""
+    
+    # Get total downloads from first row (should only be one row)
+    total_downloads = getattr(rows[0], 'total_downloads', 0)
+    formatted_total = format_number(total_downloads)
+    
+    # Create badge
+    badge_path = create_badge_svg(
+        label="PyPI Downloads", 
+        value=formatted_total, 
+        color="#306998",  # Python blue
+        output_dir=output_dir, 
+        project_name=project_name
+    )
+    
+    # Also save raw number for later use
+    project_output_dir = os.path.join(output_dir, project_name) if project_name else output_dir
+    total_downloads_file = os.path.join(project_output_dir, "total_downloads.txt")
+    with open(total_downloads_file, 'w', encoding='utf-8') as f:
+        f.write(str(total_downloads))
+    
+    return badge_path
+
+
 def generate_project_html(project_name: str, output_dir: str = "output", template_path: str = "templates/index.html") -> str:
     """Generate HTML page for a project using new CSV-based template"""
     project_output_dir = os.path.join(output_dir, project_name)
@@ -474,11 +564,21 @@ def execute_bigquery_job(job_name: str, job_config: dict):
         # Save results to CSV (with timestamp for historical records)
         save_results_to_csv(rows, results.schema, job_name, project_name)
         
-        # Create and save SVG chart (fixed filename for GitHub Actions)
-        create_svg_chart(rows, results.schema, job_name, project_name)
+        # Handle different job types
+        if job_name == "total_downloads":
+            # Create badge for total downloads
+            save_total_downloads_badge(rows, results.schema, project_name)
+        else:
+            # Create and save SVG chart (fixed filename for GitHub Actions)
+            create_svg_chart(rows, results.schema, job_name, project_name)
         
-        # Display results based on whether version info is included
-        if rows and 'version' in [field.name for field in results.schema]:
+        # Display results based on job type and schema
+        if job_name == "total_downloads":
+            print("Total Downloads Result:")
+            total_downloads = getattr(rows[0], 'total_downloads', 0)
+            formatted_total = format_number(total_downloads)
+            print(f"Total Downloads: {total_downloads:,} ({formatted_total})")
+        elif rows and 'version' in [field.name for field in results.schema]:
             print("Results (showing first 20 rows):")
             print(f"{'Date':<12} {'Version':<15} {'Downloads':<10}")
             print("-" * 40)

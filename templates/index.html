@@ -482,6 +482,76 @@
             text-decoration: underline;
         }
         
+        /* Badge section styles */
+        .badge-section {
+            margin: 30px 0;
+            padding: 30px;
+            border: 1px solid #e1e5e9;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .badge-title {
+            font-size: 1.8em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .badges-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .badge-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            transition: all 0.2s;
+        }
+        
+        .badge-item:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .download-badge {
+            max-height: 20px;
+            border-radius: 3px;
+        }
+        
+        .badge-description {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .badge-markdown-section {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .badge-markdown-section h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 1.1em;
+        }
+        
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -550,6 +620,20 @@
             .chart-actions-buttons {
                 justify-content: center;
             }
+            
+            .badge-section {
+                padding: 20px;
+            }
+            
+            .badges-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .badge-item {
+                width: 100%;
+                max-width: 300px;
+            }
         }
     </style>
 </head>
@@ -561,6 +645,28 @@
 
     <div class="update-time">
         <strong>Last Updated:</strong> {{LAST_UPDATE}}
+    </div>
+
+    <!-- Download Statistics Badges -->
+    <div class="badge-section">
+        <div class="badge-title">📊 Quick Statistics</div>
+        <div class="badges-container">
+            <div class="badge-item">
+                <img src="pypi-downloads-badge.svg" alt="Total PyPI Downloads" class="download-badge">
+                <div class="badge-description">Total Downloads</div>
+            </div>
+        </div>
+        
+        <!-- Markdown Copy Section for Badges -->
+        <div class="badge-markdown-section">
+            <h4>📋 Copy Badge Markdown</h4>
+            <div class="markdown-copy-item">
+                <textarea id="badgeMdText" class="markdown-textarea" readonly>[![PyPI Downloads](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/pypi-downloads-badge.svg)](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/index.html)</textarea>
+                <button class="btn btn-primary copy-btn" onclick="copyToClipboard('badgeMdText', this)">
+                    📋 Copy Badge
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Download Trends Chart -->
