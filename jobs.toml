@@ -26,7 +26,7 @@ vars = { project_name = "numpy" }
 
 [jobs.reversejp.download_by_date]
 sql = "sqls/download_by_date.sql"
-vars = { project_name = "numpy", time_range = 365 }
+vars = { project_name = "reversejp", time_range = 365 }
 
 [jobs.reversejp.total_downloads]
 sql = "sqls/total_downloads.sql"
