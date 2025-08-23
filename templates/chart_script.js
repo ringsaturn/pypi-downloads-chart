@@ -70,9 +70,12 @@ async function loadCsvData(filename) {
                 row[header.trim()] = values[index]?.trim();
             });
             
-            // Check if this is installer data or download trend data
+            // Check if this is installer data, country data, or download trend data
             if (row.installer_name && row.download_count) {
                 // Installer statistics data
+                data.push(row);
+            } else if (row.country_code && row.download_count) {
+                // Country statistics data
                 data.push(row);
             } else if (row.download_date && row.daily_downloads) {
                 // Download trend data
@@ -97,6 +100,8 @@ async function tryLoadRecentCsv(pattern) {
         latestFilename = 'download_by_date_all_versions_latest.csv';
     } else if (pattern === 'installer') {
         latestFilename = 'installer_stats_30d_latest.csv';
+    } else if (pattern === 'country') {
+        latestFilename = 'download_by_country_30d_latest.csv';
     }
     
     // Try the latest file first
@@ -119,6 +124,8 @@ async function tryLoadRecentCsv(pattern) {
         relevantFiles = files.filter(f => f.includes('download_by_date_all_versions_') && !f.includes('latest'));
     } else if (pattern === 'installer') {
         relevantFiles = files.filter(f => f.includes('installer_stats_30d_') && !f.includes('latest'));
+    } else if (pattern === 'country') {
+        relevantFiles = files.filter(f => f.includes('download_by_country_30d_') && !f.includes('latest'));
     }
     
     // Sort by filename (which includes timestamp) in descending order
@@ -950,6 +957,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initTrendsChart();
     initVersionChart();
     initInstallerChart();
+    initCountryChart();
 });
 
 // Installer statistics functions
@@ -1061,6 +1069,132 @@ function convertInstallerDataToCSV(data) {
     }
     
     const headers = ['installer_name', 'download_count', 'percentage'];
+    const csvRows = [headers.join(',')];
+    
+    data.forEach(row => {
+        const values = headers.map(header => {
+            const value = row[header] || '';
+            // Escape commas and quotes in values
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+        });
+        csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+}
+
+// Country statistics functions
+let countryChart = null;
+
+async function initCountryChart() {
+    const loadingEl = document.getElementById('countryLoading');
+    const errorEl = document.getElementById('countryError');
+    const chartEl = document.getElementById('countryChart');
+    const actionsEl = document.getElementById('countryChartActions');
+    const dataCountEl = document.getElementById('countryDataCount');
+    
+    try {
+        // Try to load country statistics CSV
+        const data = await tryLoadRecentCsv('country');
+        
+        if (data && data.length > 0) {
+            // Prepare chart data
+            const chartData = {
+                labels: data.map(row => row.country_code),
+                datasets: [{
+                    data: data.map(row => parseInt(row.download_count)),
+                    backgroundColor: [
+                        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+                        '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+                        '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            };
+            
+            // Create pie chart
+            const ctx = chartEl.getContext('2d');
+            countryChart = new Chart(ctx, {
+                type: 'pie',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(2);
+                                    return `${label}: ${value.toLocaleString()} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Show chart
+            chartEl.style.display = 'block';
+            actionsEl.style.display = 'flex';
+            dataCountEl.textContent = data.length;
+            
+            // Hide loading
+            loadingEl.style.display = 'none';
+        } else {
+            throw new Error('No country data available');
+        }
+    } catch (error) {
+        console.error('Error loading country chart:', error);
+        errorEl.textContent = 'Failed to load country statistics data. Please try again later.';
+        errorEl.style.display = 'block';
+        loadingEl.style.display = 'none';
+    }
+}
+
+function previewCountryData() {
+    tryLoadRecentCsv('country').then(data => {
+        const csvContent = convertCountryDataToCSV(data);
+        showDataPreview('Country Statistics Data Preview', csvContent, () => downloadCountryData());
+    }).catch(error => {
+        console.error('Error previewing country data:', error);
+        alert('Failed to preview country data');
+    });
+}
+
+function downloadCountryData() {
+    tryLoadRecentCsv('country').then(data => {
+        const csvContent = convertCountryDataToCSV(data);
+        const filename = `country-statistics-${getCurrentDateString()}.csv`;
+        downloadCSV(csvContent, filename);
+    }).catch(error => {
+        console.error('Error downloading country data:', error);
+        alert('Failed to download country data');
+    });
+}
+
+function convertCountryDataToCSV(data) {
+    if (!data || data.length === 0) {
+        return 'country_code,download_count,percentage\n';
+    }
+    
+    const headers = ['country_code', 'download_count', 'percentage'];
     const csvRows = [headers.join(',')];
     
     data.forEach(row => {

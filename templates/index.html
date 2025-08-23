@@ -768,7 +768,7 @@
     </div>
     
     <!-- SVG Charts Section -->
-    {{SVG_SECTIONS}}
+    <!-- {{SVG_SECTIONS}} -->
     
     <!-- Installer Statistics Chart -->
     <div class="chart-section">
@@ -790,6 +790,32 @@
                     👁️ Preview Data
                 </button>
                 <button class="btn btn-primary btn-sm" onclick="downloadInstallerData()">
+                    📥 Download CSV
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Country Statistics Chart -->
+    <div class="chart-section">
+        <div class="chart-title">🌍 Download by Country (Recent 30 Days)</div>
+        <div id="countryLoading" class="loading">Loading country statistics data...</div>
+        <div id="countryError" class="error" style="display: none;"></div>
+        
+        <div class="chart-container">
+            <canvas id="countryChart" style="display: none;"></canvas>
+        </div>
+        
+        <!-- Country Chart Data Actions -->
+        <div id="countryChartActions" class="chart-actions" style="display: none;">
+            <div class="chart-actions-info">
+                <span id="countryDataInfo" class="data-info">🌍 <span id="countryDataCount">0</span> countries</span>
+            </div>
+            <div class="chart-actions-buttons">
+                <button class="btn btn-outline btn-sm" onclick="previewCountryData()">
+                    👁️ Preview Data
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="downloadCountryData()">
                     📥 Download CSV
                 </button>
             </div>
