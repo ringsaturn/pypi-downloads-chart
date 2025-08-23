@@ -62,6 +62,38 @@
             margin: 20px 0;
         }
         
+        .chart-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+        }
+        
+        .chart-actions-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .data-info {
+            color: #6c757d;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        
+        .chart-actions-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+        
         .version-controls, .time-range-controls {
             margin: 20px 0;
             padding: 20px;
@@ -117,6 +149,192 @@
             flex-wrap: wrap;
             padding-top: 15px;
             border-top: 1px solid #dee2e6;
+        }
+        
+        .markdown-copy-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+        }
+        
+        .markdown-copy-section h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 1.1em;
+        }
+        
+        .markdown-copy-item {
+            display: flex;
+            gap: 10px;
+            align-items: start;
+        }
+        
+        .markdown-textarea {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85em;
+            background: #f8f9fa;
+            resize: vertical;
+            min-height: 60px;
+            line-height: 1.4;
+        }
+        
+        .markdown-textarea:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+        
+        .copy-btn {
+            white-space: nowrap;
+            min-width: 150px;
+        }
+        
+        .copy-btn.copied {
+            background: #28a745 !important;
+            border-color: #28a745 !important;
+        }
+        
+        .copy-btn.copied:before {
+            content: "✅ ";
+        }
+        
+        .data-download-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .download-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            gap: 20px;
+        }
+        
+        .download-info h4 {
+            margin: 0 0 5px 0;
+            color: #495057;
+            font-size: 1.1em;
+        }
+        
+        .download-info p {
+            margin: 0 0 8px 0;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .download-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.85em;
+        }
+        
+        .data-count {
+            color: #007bff;
+            font-weight: 500;
+        }
+        
+        .data-format {
+            color: #6c757d;
+            background: #f8f9fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        
+        .download-actions {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: #495057;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-close:hover {
+            color: #495057;
+        }
+        
+        .modal-body {
+            padding: 20px;
+            overflow: auto;
+            flex: 1;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .preview-content {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85em;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            overflow: auto;
+            max-height: 400px;
+            white-space: pre;
+            border: 1px solid #e9ecef;
         }
         
         .version-controls h4 {
@@ -284,6 +502,54 @@
             .controls-buttons {
                 justify-content: center;
             }
+            
+            .time-range-inputs {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .markdown-copy-item {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .copy-btn {
+                align-self: flex-start;
+                min-width: auto;
+            }
+            
+            .preset-ranges {
+                justify-content: center;
+            }
+            
+            .download-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+            
+            .download-actions {
+                justify-content: center;
+            }
+            
+            .modal-content {
+                max-width: 95vw;
+                margin: 10px;
+            }
+            
+            .download-meta {
+                justify-content: center;
+            }
+            
+            .chart-actions {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .chart-actions-buttons {
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -331,6 +597,21 @@
         <div class="chart-container">
             <canvas id="trendsChart" style="display: none;"></canvas>
         </div>
+        
+        <!-- Chart Data Actions -->
+        <div id="trendsChartActions" class="chart-actions" style="display: none;">
+            <div class="chart-actions-info">
+                <span id="trendsDataInfo" class="data-info">📊 <span id="trendsDataCount">0</span> data points</span>
+            </div>
+            <div class="chart-actions-buttons">
+                <button class="btn btn-outline btn-sm" onclick="previewTrendsData()">
+                    👁️ Preview Data
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="downloadTrendsData()">
+                    📥 Download CSV
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Version Comparison Chart -->
@@ -353,8 +634,66 @@
         <div class="chart-container">
             <canvas id="versionChart" style="display: none;"></canvas>
         </div>
+        
+        <!-- Version Chart Data Actions -->
+        <div id="versionChartActions" class="chart-actions" style="display: none;">
+            <div class="chart-actions-info">
+                <span id="versionDataInfo" class="data-info">📊 <span id="versionDataCount">0</span> data points</span>
+            </div>
+            <div class="chart-actions-buttons">
+                <button class="btn btn-outline btn-sm" onclick="previewVersionData()">
+                    👁️ Preview Data
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="downloadVersionData()">
+                    📥 Download CSV
+                </button>
+            </div>
+        </div>
     </div>
     
+    <!-- Data Preview Modal -->
+    <div id="dataPreviewModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="previewTitle">Data Preview</h3>
+                <button class="modal-close" onclick="closeDataPreview()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="previewContent" class="preview-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDataPreview()">Close</button>
+                <button class="btn btn-primary" id="downloadFromPreview" onclick="">Download Full Dataset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Markdown Copy Section -->
+    <div class="chart-section">
+        <div class="chart-title">📋 Markdown Integration</div>
+        <p>Copy these Markdown snippets to embed charts in your README or documentation:</p>
+        
+        <div class="markdown-copy-section">
+            <h4>📈 Download Trends Chart</h4>
+            <div class="markdown-copy-item">
+                <textarea id="trendsMdText" class="markdown-textarea" readonly>[![PyPI Downloads](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/download-trends.svg)](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/index.html)</textarea>
+                <button class="btn btn-primary copy-btn" onclick="copyToClipboard('trendsMdText', this)">
+                    📋 Copy Trends Chart
+                </button>
+            </div>
+        </div>
+        
+        <div class="markdown-copy-section">
+            <h4>🏠 Interactive Dashboard Link</h4>
+            <div class="markdown-copy-item">
+                <textarea id="dashboardMdText" class="markdown-textarea" readonly>[📊 View Interactive Dashboard](https://ringsaturn.github.io/pypi-downloads-chart/{{PROJECT_NAME}}/index.html)</textarea>
+                <button class="btn btn-primary copy-btn" onclick="copyToClipboard('dashboardMdText', this)">
+                    📋 Copy Dashboard Link
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="footer">
         <p>
             📊 Charts generated using 

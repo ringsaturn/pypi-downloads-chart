@@ -165,15 +165,28 @@ async function initTrendsChart() {
                 max: Math.max(...allTrendsData.map(d => d.x))
             };
             
-            // Initialize time range controls
-            initTimeRangeControls();
+                    // Initialize time range controls
+        initTimeRangeControls();
+        
+
+    }
+    
+    const chartData = allTrendsData;
+    
+    loadingEl.style.display = 'none';
+    chartEl.style.display = 'block';
+    document.getElementById('timeRangeControls').style.display = 'block';
+    
+    // Show chart actions
+    const chartActions = document.getElementById('trendsChartActions');
+    if (chartActions) {
+        chartActions.style.display = 'flex';
+        // Update data count
+        const dataCountEl = document.getElementById('trendsDataCount');
+        if (dataCountEl) {
+            dataCountEl.textContent = allTrendsData.length;
         }
-        
-        const chartData = allTrendsData;
-        
-        loadingEl.style.display = 'none';
-        chartEl.style.display = 'block';
-        document.getElementById('timeRangeControls').style.display = 'block';
+    }
         
         const ctx = chartEl.getContext('2d');
         trendsChart = new Chart(ctx, {
@@ -326,6 +339,17 @@ async function initVersionChart() {
         loadingEl.style.display = 'none';
         controlsEl.style.display = 'block';
         chartEl.style.display = 'block';
+        
+        // Show version chart actions
+        const versionChartActions = document.getElementById('versionChartActions');
+        if (versionChartActions) {
+            versionChartActions.style.display = 'flex';
+            // Update data count
+            const versionDataCountEl = document.getElementById('versionDataCount');
+            if (versionDataCountEl) {
+                versionDataCountEl.textContent = versionData.length;
+            }
+        }
         
         // Create version checkboxes
         createVersionCheckboxes();
@@ -700,6 +724,201 @@ function updateTrendsChart(chartData) {
     };
     
     trendsChart.update();
+}
+
+// Data download functionality
+
+function downloadTrendsData() {
+    if (!allTrendsData || allTrendsData.length === 0) {
+        alert('No trends data available for download');
+        return;
+    }
+    
+    // Convert data to CSV format
+    const csvContent = convertTrendsDataToCSV(allTrendsData);
+    const filename = `${window.location.pathname.split('/').slice(-2, -1)[0]}_download_trends_${getCurrentDateString()}.csv`;
+    
+    downloadCSV(csvContent, filename);
+}
+
+function downloadVersionData() {
+    if (!versionData || versionData.length === 0) {
+        alert('No version data available for download');
+        return;
+    }
+    
+    // Load version data from CSV and convert
+    tryLoadRecentCsv('versions').then(data => {
+        const csvContent = convertVersionDataToCSV(data);
+        const filename = `${window.location.pathname.split('/').slice(-2, -1)[0]}_version_comparison_${getCurrentDateString()}.csv`;
+        downloadCSV(csvContent, filename);
+    }).catch(error => {
+        console.error('Error downloading version data:', error);
+        alert('Failed to download version data');
+    });
+}
+
+function convertTrendsDataToCSV(data) {
+    const headers = ['download_date', 'daily_downloads'];
+    const csvRows = [headers.join(',')];
+    
+    data.forEach(point => {
+        const date = new Date(point.x).toISOString().split('T')[0];
+        const downloads = point.y;
+        csvRows.push(`${date},${downloads}`);
+    });
+    
+    return csvRows.join('\n');
+}
+
+function convertVersionDataToCSV(data) {
+    if (!data || data.length === 0) return '';
+    
+    // Get headers from first row
+    const headers = Object.keys(data[0]);
+    const csvRows = [headers.join(',')];
+    
+    data.forEach(row => {
+        const values = headers.map(header => {
+            const value = row[header];
+            // Escape commas and quotes in values
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+        });
+        csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+}
+
+function downloadCSV(csvContent, filename) {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } else {
+        // Fallback for older browsers
+        alert('Your browser does not support automatic downloads. Please copy the data from the preview.');
+    }
+}
+
+function previewTrendsData() {
+    if (!allTrendsData || allTrendsData.length === 0) {
+        alert('No trends data available for preview');
+        return;
+    }
+    
+    const csvContent = convertTrendsDataToCSV(allTrendsData);
+    showDataPreview('Download Trends Data Preview', csvContent, () => downloadTrendsData());
+}
+
+function previewVersionData() {
+    if (!versionData || versionData.length === 0) {
+        alert('No version data available for preview');
+        return;
+    }
+    
+    tryLoadRecentCsv('versions').then(data => {
+        const csvContent = convertVersionDataToCSV(data);
+        showDataPreview('Version Comparison Data Preview', csvContent, () => downloadVersionData());
+    }).catch(error => {
+        console.error('Error previewing version data:', error);
+        alert('Failed to preview version data');
+    });
+}
+
+function showDataPreview(title, csvContent, downloadCallback) {
+    const modal = document.getElementById('dataPreviewModal');
+    const titleEl = document.getElementById('previewTitle');
+    const contentEl = document.getElementById('previewContent');
+    const downloadBtn = document.getElementById('downloadFromPreview');
+    
+    titleEl.textContent = title;
+    
+    // Show first 20 lines of CSV for preview
+    const lines = csvContent.split('\n');
+    const previewLines = lines.slice(0, 21); // Header + 20 data rows
+    const previewContent = previewLines.join('\n');
+    
+    if (lines.length > 21) {
+        contentEl.textContent = previewContent + '\n... (' + (lines.length - 21) + ' more rows)';
+    } else {
+        contentEl.textContent = previewContent;
+    }
+    
+    // Set download callback
+    downloadBtn.onclick = () => {
+        downloadCallback();
+        closeDataPreview();
+    };
+    
+    modal.style.display = 'flex';
+}
+
+function closeDataPreview() {
+    document.getElementById('dataPreviewModal').style.display = 'none';
+}
+
+function getCurrentDateString() {
+    const now = new Date();
+    return now.toISOString().split('T')[0].replace(/-/g, '');
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('dataPreviewModal');
+    if (event.target === modal) {
+        closeDataPreview();
+    }
+}
+
+// Clipboard copy functionality
+async function copyToClipboard(textareaId, buttonElement) {
+    const textarea = document.getElementById(textareaId);
+    const text = textarea.value;
+    
+    try {
+        // Modern clipboard API
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            // Fallback for older browsers
+            textarea.select();
+            textarea.setSelectionRange(0, 99999); // For mobile devices
+            document.execCommand('copy');
+        }
+        
+        // Visual feedback
+        const originalText = buttonElement.textContent;
+        buttonElement.classList.add('copied');
+        buttonElement.textContent = 'Copied!';
+        
+        // Reset button after 2 seconds
+        setTimeout(() => {
+            buttonElement.classList.remove('copied');
+            buttonElement.textContent = originalText;
+        }, 2000);
+        
+    } catch (err) {
+        console.error('Failed to copy to clipboard:', err);
+        
+        // Fallback: select the text for manual copying
+        textarea.select();
+        textarea.setSelectionRange(0, 99999);
+        
+        // Show alert with fallback instruction
+        alert('Copy failed. The text has been selected - please use Ctrl+C (or Cmd+C on Mac) to copy.');
+    }
 }
 
 // Initialize charts when page loads
