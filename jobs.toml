@@ -8,18 +8,3 @@ vars = { project_name = "tzfpy", time_range = 45 }
 [jobs.download_by_date_all_versions]
 sql = "sqls/download_by_date_by_version.sql"
 vars = { project_name = "tzfpy", time_range = 45, version_filter = "all" }
-
-# 查看特定版本的逐日下载量 (示例: 版本 1.0.0)
-[jobs.download_by_date_version_1_0_0]
-sql = "sqls/download_by_date_by_version.sql"
-vars = { project_name = "tzfpy", time_range = 45, version_filter = "1.0.0" }
-
-# 查看特定版本的逐日下载量 (示例: 版本 0.15.5)
-[jobs.download_by_date_version_0_15_5]
-sql = "sqls/download_by_date_by_version.sql"
-vars = { project_name = "tzfpy", time_range = 45, version_filter = "0.15.5" }
-
-# 查看全版本聚合的逐日下载量（包含版本数量统计）
-[jobs.download_by_date_summary]
-sql = "sqls/download_by_date_all_versions_summary.sql"
-vars = { project_name = "tzfpy", time_range = 45 }

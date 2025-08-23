@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyPI Package Statistics</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .chart-section {
+            margin: 40px 0;
+            padding: 30px;
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+            background: #f8f9fa;
+            text-align: center;
+        }
+        
+        .chart-section img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+        }
+        
+        .chart-title {
+            font-size: 1.5em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #666;
+            border-top: 1px solid #e1e5e9;
+        }
+        
+        .update-time {
+            background: #e8f4f8;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #2c3e50;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .package-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📦 {{PROJECT_NAME}}</h1>
+        <p>PyPI Download Statistics</p>
+    </div>
+
+    <div class="update-time">
+        <strong>Last Updated:</strong> {{LAST_UPDATE}}
+    </div>
+
+    {{CHART_SECTIONS}}
+    
+    <div class="footer">
+        <p>
+            📊 Charts generated using 
+            <a href="https://github.com/your-username/pypi-downloads-chart" target="_blank">
+                pypi-downloads-chart
+            </a>
+        </p>
+        <p>
+            📦 Data source: 
+            <a href="https://console.cloud.google.com/bigquery?p=bigquery-public-data&d=pypi" target="_blank">
+                PyPI BigQuery Dataset
+            </a>
+        </p>
+        <p><small>Updates automatically daily via GitHub Actions</small></p>
+    </div>
+
+    <script>
+        // Update last modified time
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+        
+        // You can add more JavaScript here for dynamic content
+        // For example, loading stats from a JSON file
+    </script>
+</body>
+</html>

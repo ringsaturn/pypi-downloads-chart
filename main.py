@@ -36,16 +36,18 @@ def load_and_process_sql(sql_file_path: str, variables: dict) -> str:
 
 def save_results_to_csv(rows, schema, job_name: str, project_name: str = None, output_dir: str = "output") -> str:
     """Save BigQuery results to CSV file"""
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
+    # Create project-specific directory
+    if project_name:
+        project_output_dir = os.path.join(output_dir, project_name)
+    else:
+        project_output_dir = output_dir
+    
+    os.makedirs(project_output_dir, exist_ok=True)
     
     # Generate filename with timestamp for historical records
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    if project_name:
-        filename = f"{project_name}-{job_name}_{timestamp}.csv"
-    else:
-        filename = f"{job_name}_{timestamp}.csv"
-    filepath = os.path.join(output_dir, filename)
+    filename = f"{job_name}_{timestamp}.csv"
+    filepath = os.path.join(project_output_dir, filename)
     
     if not rows:
         print(f"No data to save for job: {job_name}")
@@ -79,24 +81,24 @@ def save_results_to_csv(rows, schema, job_name: str, project_name: str = None, o
 
 def create_svg_chart(rows, schema, job_name: str, project_name: str, output_dir: str = "output") -> str:
     """Create SVG chart from BigQuery results"""
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
+    # Create project-specific directory
+    project_output_dir = os.path.join(output_dir, project_name)
+    os.makedirs(project_output_dir, exist_ok=True)
     
-    # Generate filename with project name (no timestamp for GitHub Actions)
+    # Generate filename (no timestamp for GitHub Actions)
     # Map job names to descriptive chart names
     chart_name_mapping = {
         "download_by_date": "download-trends",
         "download_by_date_all_versions": "version-comparison", 
-        "download_by_date_summary": "download-summary",
         "download_by_date_version": "version-specific"
     }
     
     # Get chart name from mapping or use job name
     chart_name = chart_name_mapping.get(job_name, job_name.replace("_", "-"))
     
-    # Create filename: {project-name}-{chart-type}.svg
-    filename = f"{project_name}-{chart_name}.svg"
-    filepath = os.path.join(output_dir, filename)
+    # Create filename: {chart-type}.svg (inside project directory)
+    filename = f"{chart_name}.svg"
+    filepath = os.path.join(project_output_dir, filename)
     
     if not rows:
         print(f"No data to create chart for job: {job_name}")
@@ -127,9 +129,6 @@ def create_svg_chart(rows, schema, job_name: str, project_name: str, output_dir:
     if 'version' in df.columns:
         # Multi-version chart
         create_version_chart(df, ax, job_name, project_name)
-    elif 'versions_count' in df.columns:
-        # Summary chart with version count
-        create_summary_chart(df, ax, job_name, project_name)
     else:
         # Simple download chart
         create_simple_chart(df, ax, job_name, project_name)
@@ -170,37 +169,6 @@ def create_version_chart(df, ax, job_name: str, project_name: str):
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
 
-def create_summary_chart(df, ax, job_name: str, project_name: str):
-    """Create chart for summary data with version count"""
-    df_sorted = df.sort_values('download_date')
-    
-    # Create primary y-axis for downloads
-    ax.bar(df_sorted['download_date'], df_sorted['daily_downloads'], 
-           alpha=0.7, color='skyblue', label='Daily Downloads')
-    ax.set_ylabel('Daily Downloads', fontsize=12, color='blue')
-    ax.tick_params(axis='y', labelcolor='blue')
-    
-    # Create secondary y-axis for version count
-    ax2 = ax.twinx()
-    ax2.plot(df_sorted['download_date'], df_sorted['versions_count'], 
-             color='red', marker='o', linewidth=2, markersize=4, label='Version Count')
-    ax2.set_ylabel('Number of Versions', fontsize=12, color='red')
-    ax2.tick_params(axis='y', labelcolor='red')
-    
-    ax.set_title(f'{project_name} - Daily Downloads & Version Count', fontsize=14, fontweight='bold')
-    ax.set_xlabel('Date', fontsize=12)
-    ax.grid(True, alpha=0.3)
-    
-    # Format x-axis dates
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(df['download_date'].unique()) // 10)))
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
-    
-    # Add legends
-    lines1, labels1 = ax.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
-    ax.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
-
 
 def create_simple_chart(df, ax, job_name: str, project_name: str):
     """Create simple download chart"""
@@ -220,6 +188,157 @@ def create_simple_chart(df, ax, job_name: str, project_name: str):
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(df['download_date'].unique()) // 10)))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+
+
+def generate_project_html(project_name: str, output_dir: str = "output", template_path: str = "templates/index.html") -> str:
+    """Generate HTML page for a project using template"""
+    project_output_dir = os.path.join(output_dir, project_name)
+    
+    # Check if project directory exists
+    if not os.path.exists(project_output_dir):
+        print(f"Project directory does not exist: {project_output_dir}")
+        return ""
+    
+    # Find SVG files in project directory
+    svg_files = []
+    if os.path.exists(project_output_dir):
+        for file in os.listdir(project_output_dir):
+            if file.endswith('.svg'):
+                svg_files.append(file)
+    
+    # Read template
+    template_content = ""
+    if os.path.exists(template_path):
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+    else:
+        # Create a simple default template
+        template_content = create_default_template()
+    
+    # Replace template variables
+    html_content = template_content.replace('{{PROJECT_NAME}}', project_name)
+    html_content = html_content.replace('{{LAST_UPDATE}}', datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'))
+    
+    # Generate chart sections
+    chart_sections = generate_chart_sections(svg_files, project_name)
+    html_content = html_content.replace('{{CHART_SECTIONS}}', chart_sections)
+    
+    # Save HTML file
+    html_filepath = os.path.join(project_output_dir, 'index.html')
+    with open(html_filepath, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+    
+    print(f"Generated HTML page: {html_filepath}")
+    return html_filepath
+
+
+def create_default_template() -> str:
+    """Create a default HTML template if none exists"""
+    return '''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PROJECT_NAME}} - PyPI Download Statistics</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        .chart-section {
+            margin: 40px 0;
+            padding: 30px;
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+            background: #f8f9fa;
+            text-align: center;
+        }
+        .chart-section img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+        }
+        .chart-title {
+            font-size: 1.5em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .update-time {
+            background: #e8f4f8;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📦 {{PROJECT_NAME}}</h1>
+        <p>PyPI Download Statistics</p>
+    </div>
+
+    <div class="update-time">
+        <strong>Last Updated:</strong> {{LAST_UPDATE}}
+    </div>
+
+    {{CHART_SECTIONS}}
+
+    <div style="text-align: center; margin-top: 40px; color: #666;">
+        <p>Generated by <a href="https://github.com/your-username/pypi-downloads-chart">pypi-downloads-chart</a></p>
+    </div>
+</body>
+</html>'''
+
+
+def generate_chart_sections(svg_files: list, project_name: str) -> str:
+    """Generate HTML sections for charts"""
+    chart_descriptions = {
+        "download-trends.svg": "📈 Download Trends",
+        "version-comparison.svg": "📊 Version Comparison", 
+        "version-specific.svg": "🎯 Version Specific"
+    }
+    
+    # Define priority order for charts - Download Trends first
+    priority_order = [
+        "download-trends.svg",
+        "version-comparison.svg", 
+        "version-specific.svg"
+    ]
+    
+    # Sort files by priority, then alphabetically
+    def sort_key(filename):
+        if filename in priority_order:
+            return (priority_order.index(filename), filename)
+        return (len(priority_order), filename)
+    
+    sorted_files = sorted(svg_files, key=sort_key)
+    
+    sections = ""
+    for svg_file in sorted_files:
+        title = chart_descriptions.get(svg_file, svg_file.replace('.svg', '').replace('-', ' ').title())
+        sections += f'''
+    <div class="chart-section">
+        <div class="chart-title">{title}</div>
+        <img src="{svg_file}" alt="{title} for {project_name}">
+    </div>'''
+    
+    return sections
 
 
 def execute_bigquery_job(job_name: str, job_config: dict):
@@ -290,21 +409,12 @@ def execute_bigquery_job(job_name: str, job_config: dict):
                     print(f"{version:<15} {total:<15}")
         else:
             print("Results (showing first 20 rows):")
-            # Check if this is the summary query with version count
-            if rows and hasattr(rows[0], 'versions_count'):
-                print(f"{'Date':<12} {'Downloads':<10} {'Versions':<10}")
-                print("-" * 35)
-                for i, row in enumerate(rows):
-                    if i >= 20:  # Show first 20 rows
-                        break
-                    print(f"{row.download_date.strftime('%Y-%m-%d'):<12} {row.daily_downloads:<10} {row.versions_count:<10}")
-            else:
-                print(f"{'Date':<12} {'Downloads':<10}")
-                print("-" * 25)
-                for i, row in enumerate(rows):
-                    if i >= 20:  # Show first 20 rows
-                        break
-                    print(f"{row.download_date.strftime('%Y-%m-%d'):<12} {row.daily_downloads:<10}")
+            print(f"{'Date':<12} {'Downloads':<10}")
+            print("-" * 25)
+            for i, row in enumerate(rows):
+                if i >= 20:  # Show first 20 rows
+                    break
+                print(f"{row.download_date.strftime('%Y-%m-%d'):<12} {row.daily_downloads:<10}")
 
         return results
 
@@ -331,9 +441,28 @@ def main():
     print("=" * 50)
 
     # Execute all jobs
+    processed_projects = set()
     for job_name, job_config in jobs.items():
         execute_bigquery_job(job_name, job_config)
+        
+        # Track projects for HTML generation
+        variables = job_config.get("vars", {})
+        project_name = variables.get("project_name", "unknown-package")
+        processed_projects.add(project_name)
+        
         print("=" * 50)
+    
+    # Generate HTML pages for each project
+    print("🌐 Generating HTML pages...")
+    for project_name in processed_projects:
+        generate_project_html(project_name)
+    
+    # Generate project index page
+    print("📝 Generating project index page...")
+    from generate_index import generate_project_index
+    generate_project_index()
+    
+    print("✅ HTML generation completed!")
 
 
 if __name__ == "__main__":
