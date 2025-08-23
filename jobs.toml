@@ -12,6 +12,30 @@ vars = { project_name = "maturin" }
 sql = "sqls/recent_30_days_downloads.sql"
 vars = { project_name = "maturin" }
 
+[jobs.numpy.download_by_date]
+sql = "sqls/download_by_date.sql"
+vars = { project_name = "numpy", time_range = 365 }
+
+[jobs.numpy.total_downloads]
+sql = "sqls/total_downloads.sql"
+vars = { project_name = "numpy" }
+
+[jobs.numpy.recent_30_days_downloads]
+sql = "sqls/recent_30_days_downloads.sql"
+vars = { project_name = "numpy" }
+
+[jobs.reversejp.download_by_date]
+sql = "sqls/download_by_date.sql"
+vars = { project_name = "numpy", time_range = 365 }
+
+[jobs.reversejp.total_downloads]
+sql = "sqls/total_downloads.sql"
+vars = { project_name = "reversejp" }
+
+[jobs.reversejp.recent_30_days_downloads]
+sql = "sqls/recent_30_days_downloads.sql"
+vars = { project_name = "reversejp" }
+
 [jobs.tzfpy.download_by_date]
 sql = "sqls/download_by_date.sql"
 vars = { project_name = "tzfpy", time_range = 365 }
