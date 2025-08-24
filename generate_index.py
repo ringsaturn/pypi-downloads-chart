@@ -6,7 +6,6 @@
 import os
 import tomllib
 from datetime import datetime, timezone
-from pathlib import Path
 
 
 def format_number(num):
@@ -23,10 +22,10 @@ def format_number(num):
 
 def read_total_downloads(project_path):
     """Read total downloads from project directory"""
-    total_downloads_file = os.path.join(project_path, 'total_downloads.txt')
+    total_downloads_file = os.path.join(project_path, "total_downloads.txt")
     if os.path.exists(total_downloads_file):
         try:
-            with open(total_downloads_file, 'r') as f:
+            with open(total_downloads_file, "r") as f:
                 return int(f.read().strip())
         except (ValueError, IOError):
             pass
@@ -35,10 +34,10 @@ def read_total_downloads(project_path):
 
 def read_recent_30_days_downloads(project_path):
     """Read recent 30 days downloads from project directory"""
-    recent_downloads_file = os.path.join(project_path, 'recent_30_days_downloads.txt')
+    recent_downloads_file = os.path.join(project_path, "recent_30_days_downloads.txt")
     if os.path.exists(recent_downloads_file):
         try:
-            with open(recent_downloads_file, 'r') as f:
+            with open(recent_downloads_file, "r") as f:
                 return int(f.read().strip())
         except (ValueError, IOError):
             pass
@@ -47,7 +46,7 @@ def read_recent_30_days_downloads(project_path):
 
 def generate_project_index(output_dir="output", pages_dir="output"):
     """Generate index page with project links"""
-    
+
     # Find all project directories
     projects = []
     if os.path.exists(output_dir):
@@ -55,27 +54,35 @@ def generate_project_index(output_dir="output", pages_dir="output"):
             project_path = os.path.join(output_dir, item)
             if os.path.isdir(project_path):
                 # Check if directory has SVG files (indicating it's a project)
-                svg_files = [f for f in os.listdir(project_path) if f.endswith('.svg')]
+                svg_files = [f for f in os.listdir(project_path) if f.endswith(".svg")]
                 if svg_files:
                     total_downloads = read_total_downloads(project_path)
                     recent_downloads = read_recent_30_days_downloads(project_path)
-                    projects.append({
-                        'name': item,
-                        'chart_count': len(svg_files),
-                        'has_html': os.path.exists(os.path.join(project_path, 'index.html')),
-                        'total_downloads': total_downloads,
-                        'recent_30_days_downloads': recent_downloads,
-                        'has_badge': os.path.exists(os.path.join(project_path, 'pypi-downloads-badge.svg')),
-                        'has_recent_badge': os.path.exists(os.path.join(project_path, 'downloads-(30d)-badge.svg'))
-                    })
-    
+                    projects.append(
+                        {
+                            "name": item,
+                            "chart_count": len(svg_files),
+                            "has_html": os.path.exists(
+                                os.path.join(project_path, "index.html")
+                            ),
+                            "total_downloads": total_downloads,
+                            "recent_30_days_downloads": recent_downloads,
+                            "has_badge": os.path.exists(
+                                os.path.join(project_path, "pypi-downloads-badge.svg")
+                            ),
+                            "has_recent_badge": os.path.exists(
+                                os.path.join(project_path, "downloads-(30d)-badge.svg")
+                            ),
+                        }
+                    )
+
     # Also check jobs.toml for project info
     project_descriptions = {}
     try:
         with open("jobs.toml", "rb") as f:
             config = tomllib.load(f)
             jobs = config.get("jobs", {})
-            
+
             # Parse nested structure: jobs.{package_name}.{job_type}
             for package_name, package_jobs in jobs.items():
                 if isinstance(package_jobs, dict):
@@ -84,14 +91,14 @@ def generate_project_index(output_dir="output", pages_dir="output"):
                         project_name = variables.get("project_name")
                         if project_name and project_name not in project_descriptions:
                             project_descriptions[project_name] = {
-                                'description': f'PyPI package analytics for {project_name}',
-                                'time_range': variables.get('time_range', 45)
+                                "description": f"PyPI package analytics for {project_name}",
+                                "time_range": variables.get("time_range", 45),
                             }
     except Exception as e:
         print(f"Warning: Could not read jobs.toml: {e}")
-    
+
     # Generate HTML content
-    html_content = f'''<!DOCTYPE html>
+    html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -261,53 +268,55 @@ def generate_project_index(output_dir="output", pages_dir="output"):
     </div>
 
     <div class="update-time">
-        <strong>Last Updated:</strong> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}
+        <strong>Last Updated:</strong> {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}
     </div>
-'''
+"""
 
     if projects:
         html_content += '    <div class="project-grid">\n'
-        
-        for project in sorted(projects, key=lambda x: x['name']):
-            name = project['name']
-            chart_count = project['chart_count']
-            total_downloads = project['total_downloads']
-            recent_downloads = project['recent_30_days_downloads']
-            has_badge = project['has_badge']
-            has_recent_badge = project['has_recent_badge']
-            description = project_descriptions.get(name, {}).get('description', f'Download statistics for {name}')
-            time_range = project_descriptions.get(name, {}).get('time_range', 45)
-            
+
+        for project in sorted(projects, key=lambda x: x["name"]):
+            name = project["name"]
+            chart_count = project["chart_count"]
+            total_downloads = project["total_downloads"]
+            recent_downloads = project["recent_30_days_downloads"]
+            has_badge = project["has_badge"]
+            has_recent_badge = project["has_recent_badge"]
+            description = project_descriptions.get(name, {}).get(
+                "description", f"Download statistics for {name}"
+            )
+            time_range = project_descriptions.get(name, {}).get("time_range", 45)
+
             # Generate downloads display
             downloads_display = ""
             badge_display = ""
-            
+
             if total_downloads is not None:
                 formatted_downloads = format_number(total_downloads)
-                downloads_display += f'''
+                downloads_display += f"""
             <div class="total-downloads">
                 📥 Total Downloads: {total_downloads:,} ({formatted_downloads})
-            </div>'''
-            
+            </div>"""
+
             if recent_downloads is not None:
                 formatted_recent = format_number(recent_downloads)
-                downloads_display += f'''
+                downloads_display += f"""
             <div class="total-downloads" style="background: #e8f5e8; color: #2e7d32;">
                 📊 Recent 30 Days: {recent_downloads:,} ({formatted_recent})
-            </div>'''
-            
+            </div>"""
+
             if has_badge:
                 badge_display += f'''
             <div class="download-badge">
                 <img src="{name}/pypi-downloads-badge.svg" alt="Total Download Badge for {name}">
             </div>'''
-            
+
             if has_recent_badge:
                 badge_display += f'''
             <div class="download-badge">
                 <img src="{name}/downloads-(30d)-badge.svg" alt="30-Day Download Badge for {name}">
             </div>'''
-            
+
             html_content += f'''        <a href="{name}/index.html" class="project-card">
             <div class="project-name">📦 {name}</div>
             <div class="project-description">{description}</div>{downloads_display}{badge_display}
@@ -317,17 +326,17 @@ def generate_project_index(output_dir="output", pages_dir="output"):
             </div>
         </a>
 '''
-        
-        html_content += '    </div>\n'
+
+        html_content += "    </div>\n"
     else:
-        html_content += '''    <div class="empty-state">
+        html_content += """    <div class="empty-state">
         <h2>🔍 No projects found</h2>
         <p>Run the chart generation script to create project statistics.</p>
         <p>Make sure you have configured <code>jobs.toml</code> with your package information.</p>
     </div>
-'''
+"""
 
-    html_content += f'''
+    html_content += f"""
     <div class="footer">
         <p>
             📊 Generated by 
@@ -344,19 +353,21 @@ def generate_project_index(output_dir="output", pages_dir="output"):
         <p><small>Found {len(projects)} project(s) • Updates automatically via GitHub Actions</small></p>
     </div>
 </body>
-</html>'''
+</html>"""
 
     # Ensure pages directory exists
     os.makedirs(pages_dir, exist_ok=True)
-    
+
     # Write index.html
-    index_path = os.path.join(pages_dir, 'index.html')
-    with open(index_path, 'w', encoding='utf-8') as f:
+    index_path = os.path.join(pages_dir, "index.html")
+    with open(index_path, "w", encoding="utf-8") as f:
         f.write(html_content)
-    
+
     print(f"📝 Generated project index: {index_path}")
-    print(f"📊 Found {len(projects)} projects: {', '.join([p['name'] for p in projects])}")
-    
+    print(
+        f"📊 Found {len(projects)} projects: {', '.join([p['name'] for p in projects])}"
+    )
+
     return index_path
 
 
