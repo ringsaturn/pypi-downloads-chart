@@ -2,7 +2,7 @@ name: Build Charts and Deploy to Pages
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天 UTC 00:00 运行
+    - cron: '0 0 1 * *'  # 每月 UTC 1日 00:00 运行
   workflow_dispatch:  # 允许手动触发
 
 # 设置 GitHub Pages 部署权限
